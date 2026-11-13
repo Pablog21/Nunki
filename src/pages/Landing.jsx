@@ -26,18 +26,33 @@ const BRAND = {
 // Ejemplo: { nombre: 'Salón', precio: '$ 00.000', periodo: '/mes', detalle: 'Hasta 5 profesionales', items: ['Agenda', 'Caja'], destacado: true }
 const PLANES = []
 
-const VIDEOS = [
-  '3996899-uhd_2160_4096_25fps.mp4',
-  '5885774-hd_1080_1920_25fps.mp4',
-  '6663336-uhd_2160_3744_30fps.mp4',
-  '7440200-uhd_2160_4096_25fps.mp4',
-  '7450929-uhd_2160_4096_25fps.mp4',
-  '8102244-uhd_2160_4096_25fps.mp4',
-  '8331940-uhd_2160_4096_25fps.mp4',
-  '8488854-hd_1080_1920_25fps.mp4',
-]
+// Videos del hero en 1080p (recomprimidos desde Videos_Raw)
+const VIDEOS = ['hero-8488854.mp4', 'hero-8331940.mp4', 'hero-5885774.mp4']
 
 const ars = (n) => '$ ' + Math.round(n).toLocaleString('es-AR')
+
+// Tipos de salón: cada tarjeta usa un video corto en loop. Si el archivo no existe, muestra un fondo de marca.
+const TIPOS = [
+  { titulo: 'Peluquerías', texto: 'Agenda por estilista y servicios largos sin superposiciones.', video: '/landing/tipo-8488854.mp4', poster: '/landing/tipo-8488854.jpg' },
+  { titulo: 'Coloristas', texto: 'Recetas de insumos que descuentan el stock en cada color.', video: '/landing/tipo-3996899.mp4', poster: '/landing/tipo-3996899.jpg' },
+  { titulo: 'Barberías', texto: 'Turnos cortos y seguidos, y la caja cerrada en minutos.', video: null, poster: null }, // Pendiente: video de barbería (tipo-barberia.mp4)
+  { titulo: 'Salones con equipo', texto: 'Comisiones compartidas, asistencias y permisos por persona.', video: '/landing/tipo-5885774.mp4', poster: '/landing/tipo-5885774.jpg' },
+]
+
+function TipoCard({ titulo, texto, video, poster }) {
+  const [sinVideo, setSinVideo] = useState(!video)
+  return (
+    <article className="lp-type">
+      {!sinVideo
+        ? <video src={video} poster={poster} autoPlay muted loop playsInline preload="metadata" onError={() => setSinVideo(true)} aria-hidden="true" />
+        : <div className="lp-type-fallback" aria-hidden="true"><NunkiSymbol size={72} color="#F3EFE7" /></div>}
+      <div className="lp-type-txt">
+        <h3>{titulo}</h3>
+        <p>{texto}</p>
+      </div>
+    </article>
+  )
+}
 
 const DOLORES = [
   { dolor: 'La caja no cierra y no sabés dónde está la diferencia.', solucion: 'Cada comanda registra efectivo, tarjeta y transferencia por separado. El cierre se calcula solo y queda controlado por el dueño.' },
@@ -229,7 +244,7 @@ export default function Landing() {
           key={videoIndex}
           className="lp-hero-video"
           style={{ opacity: videoVisible ? 1 : 0 }}
-          src={`/videos/${VIDEOS[videoIndex]}`}
+          src={`/landing/${VIDEOS[videoIndex]}`}
           autoPlay muted playsInline
           onEnded={nextVideo}
         />
@@ -250,7 +265,7 @@ export default function Landing() {
                 {BRAND.whatsapp ? <MessageCircle size={18} /> : null}
                 Quiero ver una demo <ArrowRight size={18} />
               </button>
-              <a href="#funciones" className="lp-btn lp-btn-ghost lp-btn-lg">Ver qué incluye</a>
+              <a href="#reserva-online" className="lp-btn lp-btn-glass lp-btn-lg">Ver cómo funciona</a>
             </div>
             <ul className="lp-trust">
               <li><Smartphone size={15} /> Celular, tablet o PC</li>
@@ -259,32 +274,35 @@ export default function Landing() {
             </ul>
           </div>
 
-          {/* Mock del cierre de caja */}
-          <div className="lp-mock" aria-hidden="true">
-            <div className="lp-mock-head">
-              <span>Caja de hoy</span>
-              <span className="lp-pill-ok">Cerrada y controlada</span>
+          <div className="lp-devices" aria-hidden="true">
+            <div className="lp-laptop">
+              <div className="lp-laptop-bar"><i /><i /><i /></div>
+              <img src="/landing/app-reservas-dark.webp" alt="" width="1280" height="800" />
             </div>
-            <div className="lp-mock-total">
-              <small>Total cobrado</small>
-              <strong>{ars(386500)}</strong>
-              <span>14 comandas · 6 profesionales</span>
+            <div className="lp-phone lp-phone-hero">
+              <img src="/landing/reserva-servicios.webp" alt="" width="390" height="844" />
             </div>
-            <div className="lp-mock-split">
-              {[['Efectivo', 152000, 39], ['Tarjeta', 141500, 37], ['Transferencia', 93000, 24]].map(([n, v, p]) => (
-                <div key={n}>
-                  <div className="lp-mock-row"><span>{n}</span><b>{ars(v)}</b></div>
-                  <div className="lp-bar"><i style={{ width: p + '%' }} /></div>
-                </div>
-              ))}
-            </div>
-            <div className="lp-mock-list">
-              <div className="lp-mock-sub">Comisiones del día</div>
-              {[['Marcos', 38400], ['Sofía', 31250], ['Lucas · barbería', 22800]].map(([n, v]) => (
-                <div className="lp-mock-row" key={n}><span>{n}</span><b>{ars(v)}</b></div>
-              ))}
-            </div>
-            <div className="lp-mock-alert"><Package size={14} /> Quedan 2 tinturas 7.1 — sugerido reponer</div>
+          </div>
+        </div>
+      </section>
+
+      {/* FRANJA DE DIFERENCIALES */}
+      <section className="lp-band" aria-label="Lo que incluye">
+        <div className="lp-wrap lp-band-in">
+          <span><Calendar size={18} /> Reserva online 24/7</span>
+          <span><MessageCircle size={18} /> Recordatorios por WhatsApp incluidos</span>
+          <span><Mic size={18} /> {BRAND.asistente}, asistente con IA por voz</span>
+          <span><Wallet size={18} /> Caja y comisiones automáticas</span>
+        </div>
+      </section>
+
+      {/* TIPOS DE SALÓN */}
+      <section className="lp-section lp-types-sec">
+        <div className="lp-wrap">
+          <span className="lp-kicker">Hecho para tu rubro</span>
+          <h2 className="lp-h2">Un sistema, cada estilo de salón</h2>
+          <div className="lp-types">
+            {TIPOS.map((t) => <TipoCard key={t.titulo} {...t} />)}
           </div>
         </div>
       </section>
@@ -300,6 +318,46 @@ export default function Landing() {
                 <p className="lp-pain-a"><Check size={16} /> {d.solucion}</p>
               </article>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* RESERVA ONLINE */}
+      <section className="lp-section lp-show" id="reserva-online">
+        <div className="lp-wrap lp-show-grid">
+          <div className="lp-show-copy">
+            <span className="lp-kicker">Reserva online</span>
+            <h2 className="lp-h2">Tus clientes sacan turno solos, a cualquier hora</h2>
+            <p className="lp-sub">Un link propio para la bio de Instagram, Google Maps y WhatsApp. Eligen servicio, profesional y horario libre, y el turno aparece en tu agenda.</p>
+            <ul className="lp-checks">
+              <li><Check size={16} /> Solo muestra horarios realmente libres de cada profesional</li>
+              <li><Check size={16} /> Sin app que descargar: funciona desde el navegador del celular</li>
+              <li><Check size={16} /> Vos decidís qué servicios se reservan online y con cuánta anticipación</li>
+            </ul>
+          </div>
+          <div className="lp-phones" aria-hidden="true">
+            <div className="lp-phone"><img src="/landing/reserva-dia.webp" alt="" width="390" height="844" loading="lazy" /></div>
+            <div className="lp-phone lp-phone-up"><img src="/landing/reserva-ok.webp" alt="" width="390" height="844" loading="lazy" /></div>
+          </div>
+        </div>
+      </section>
+
+      {/* RECORDATORIOS */}
+      <section className="lp-section lp-show lp-tint">
+        <div className="lp-wrap lp-show-grid lp-show-rev">
+          <div className="lp-laptop lp-laptop-light" aria-hidden="true">
+            <div className="lp-laptop-bar"><i /><i /><i /></div>
+            <img src="/landing/app-reservas-light.webp" alt="" width="1280" height="800" loading="lazy" />
+          </div>
+          <div className="lp-show-copy">
+            <span className="lp-kicker">Recordatorios por WhatsApp</span>
+            <h2 className="lp-h2">Menos sillas vacías, sin pagar por mensaje</h2>
+            <p className="lp-sub">Cada tarde ves los turnos de mañana con el mensaje listo. Un toque y se abre WhatsApp con el nombre, el servicio y la hora. Marcás quién confirmó y listo.</p>
+            <ul className="lp-checks">
+              <li><Check size={16} /> Incluido en el plan, sin créditos ni paquetes de mensajes</li>
+              <li><Check size={16} /> Mensaje personalizable con el tono de tu salón</li>
+              <li><Check size={16} /> Las reservas online quedan marcadas para que las veas al instante</li>
+            </ul>
           </div>
         </div>
       </section>
@@ -362,27 +420,6 @@ export default function Landing() {
                   <Send size={12} /> {c.pregunta}
                 </button>
               ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PARA QUIÉN */}
-      <section className="lp-section">
-        <div className="lp-wrap">
-          <h2 className="lp-h2">Pensado para cómo trabaja tu salón</h2>
-          <div className="lp-who-grid">
-            <div className="lp-who">
-              <h3>Peluquerías</h3>
-              <p>Coloración con receta de insumos, servicios largos en la agenda y trabajos compartidos entre colorista y estilista, cada uno con su comisión.</p>
-            </div>
-            <div className="lp-who">
-              <h3>Barberías</h3>
-              <p>Turnos cortos y seguidos, venta de productos en la misma comanda y la caja del día cerrada en minutos, aunque cobren varios barberos.</p>
-            </div>
-            <div className="lp-who">
-              <h3>Salones con equipo</h3>
-              <p>Asistencias, liquidaciones y permisos: el equipo carga su trabajo y el dueño controla caja, compras y resultados desde cualquier lugar.</p>
             </div>
           </div>
         </div>
@@ -473,6 +510,7 @@ export default function Landing() {
 
       {/* CTA FINAL */}
       <section className="lp-final">
+        <video className="lp-final-video" src="/landing/hero-8331940.mp4" autoPlay muted loop playsInline preload="none" aria-hidden="true" />
         <div className="lp-wrap">
           <h2>Ordená tu salón esta semana</h2>
           <p>Contanos cuántos profesionales son y te mostramos {BRAND.nombre} funcionando con ejemplos de tu rubro.</p>
