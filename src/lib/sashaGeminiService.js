@@ -5,15 +5,42 @@ import { supabase } from './supabaseClient'
  * Invoca a Gemini solo a través de la Edge Function `nunki-sasha`.
  * La clave de Gemini vive en los secretos de Supabase y nunca llega al navegador.
  */
-export async function callGemini(prompt, systemInstruction = '', history = []) {
+// Error especial cuando el salón llegó al tope de consultas de Sasha
+export class SashaLimiteError extends Error {
+  constructor(motivo, estado) {
+    super(motivo === 'diario'
+      ? 'Llegaste al máximo de consultas a Sasha por hoy. Mañana se renueva.'
+      : 'El salón llegó al límite de consultas a Sasha de este mes.')
+    this.name = 'SashaLimiteError'
+    this.motivo = motivo
+    this.estado = estado
+  }
+}
+
+export async function callGemini(prompt, systemInstruction = '', history = [], empresaId = null) {
   const { data, error } = await supabase.functions.invoke('nunki-sasha', {
-    body: { prompt, systemInstruction, temperature: 0.2, history }
+    body: { prompt, systemInstruction, temperature: 0.2, history, empresaId }
   })
   if (error) {
     console.error('Sasha no disponible:', error)
     throw new Error('Sasha no está disponible en este momento. Probá de nuevo en unos minutos.')
   }
+  if (data?.bloqueado) throw new SashaLimiteError(data.motivo, data.estado)
   if (data?.error) throw new Error(data.error)
+  return data
+}
+
+// Estado del cupo de Sasha del salón en el mes
+export async function fetchUsoSasha(empresaId) {
+  const { data, error } = await supabase.rpc('ia_estado', { p_empresa: empresaId })
+  if (error) return null
+  return data
+}
+
+// El administrador suma un paquete extra a su próxima factura
+export async function comprarPaqueteSasha(empresaId) {
+  const { data, error } = await supabase.rpc('ia_comprar_extra', { p_empresa: empresaId })
+  if (error) throw new Error(error.message)
   return data
 }
 
@@ -490,7 +517,7 @@ DEBES RESPONDER EXCLUSIVAMENTE CON UN OBJETO JSON con la siguiente estructura:
 }
 `
 
-  const responseJson = await callGemini(prompt, systemInstruction, conversationHistory)
+  const responseJson = await callGemini(prompt, systemInstruction, conversationHistory, activeEmpresaId)
 
   // Salvaguardas lógicas para el hilo conversacional:
   // 1. Si la intención es consultar servicio o visita y el modelo no especificó nombre o usó pronombres, usar el cliente en contexto

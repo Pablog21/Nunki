@@ -658,3 +658,11 @@ body.light-theme .sasha-stage { background: radial-gradient(ellipse at 50% 60%, 
   .sasha-stage { padding: 6px 0 4px; }
   .sasha-stage .sf { width: 76px !important; height: 76px !important; }
 }
+
+/* Límite de consultas */
+.sasha-limite { display: grid; gap: 6px; margin-top: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(217, 130, 74, 0.45); background: rgba(217, 130, 74, 0.08); }
+.sasha-limite small { color: var(--text-secondary); font-size: 0.74rem; }
+.sasha-limite-btn { border: 0; border-radius: 10px; padding: 9px 12px; font: 600 0.84rem Inter, sans-serif; cursor: pointer; background: #D9824A; color: #0B1F1A; }
+.sasha-limite-btn:disabled { opacity: 0.6; cursor: default; }
+.sasha-limite-ok { display: flex; gap: 6px; align-items: flex-start; margin: 0; font-size: 0.8rem; color: #6FC79E; }
+.sasha-limite-err { color: #F08A7E !important; }

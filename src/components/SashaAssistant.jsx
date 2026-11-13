@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { procesarMensajeSasha, fetchResumenComandas } from '../lib/sashaGeminiService'
+import { procesarMensajeSasha, fetchResumenComandas, SashaLimiteError, fetchUsoSasha, comprarPaqueteSasha } from '../lib/sashaGeminiService'
 import { useNavigate } from 'react-router-dom'
 import SashaFace from './SashaFace'
 import { esAdmin } from '../lib/roles'
@@ -255,16 +255,16 @@ export default function SashaAssistant() {
   }
 
   // Enviar consulta o instrucción a Sasha
-  const handleSendMessage = async (textToSend = inputText) => {
-    const query = textToSend.trim()
+  const handleSendMessage = async (textToSend = inputText, { reintento = false } = {}) => {
+    const query = (typeof textToSend === 'string' ? textToSend : inputText).trim()
     if (!query || isProcessing) return
 
     setInputText('')
     setRecordingError(null)
 
-    // Agregar mensaje del usuario
+    // Agregar mensaje del usuario (no se repite cuando reintentamos tras desbloquear)
     const userMsgId = Date.now().toString()
-    setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: query }])
+    if (!reintento) setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: query }])
     setIsProcessing(true)
 
     try {
@@ -350,6 +350,25 @@ export default function SashaAssistant() {
       setMessages(prev => [...prev, assistantMsg])
       speakText(assistantMsg.text)
     } catch (err) {
+      if (err instanceof SashaLimiteError) {
+        const est = err.estado || {}
+        const paq = est.paquete || {}
+        const puedeSumar = err.motivo === 'mensual' && esAdmin(userProfile)
+        const texto = err.motivo === 'diario'
+          ? err.message
+          : `Llegamos al límite de ${est.limite ?? ''} consultas de este mes, así que por ahora no puedo responder. ` +
+            (puedeSumar
+              ? `Si querés, sumás ${paq.consultas} consultas más por $${Number(paq.precio_ars || 0).toLocaleString('es-AR')} en tu próxima factura y sigo al instante.`
+              : 'Pedile al administrador del salón que sume más consultas.')
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          sender: 'assistant',
+          text: texto,
+          limite: { motivo: err.motivo, estado: est, query, puedeSumar, status: 'pendiente' },
+        }])
+        speakText(texto)
+        return
+      }
       console.error('Error procesando mensaje con Sasha:', err)
       const errorMsg = {
         id: (Date.now() + 1).toString(),
@@ -714,6 +733,9 @@ export default function SashaAssistant() {
             .neq('estado', 'Cancelado')
             .is('recordatorio_enviado_at', null)
           if (count > 0) partes.push(`Mañana hay ${count} turno${count > 1 ? 's' : ''} sin recordar por WhatsApp.`)
+          const uso = await fetchUsoSasha(activeEmpresaId)
+          if (uso?.bloqueado) partes.push(`Ojo: este mes ya usaron las ${uso.limite} consultas que tengo disponibles; si me preguntás algo te ofrezco sumar más.`)
+          else if (uso?.porcentaje >= 80) partes.push(`Ojo: este mes ya usaron el ${uso.porcentaje}% de mis consultas (quedan ${uso.disponibles}).`)
         }
       } catch (err) {
         console.warn('Sasha: no pude armar el resumen del día', err)
@@ -726,6 +748,19 @@ export default function SashaAssistant() {
 
     armarSaludo()
   }, [isOpen, activeEmpresaId, userProfile]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sumarConsultas = async (msgId) => {
+    const msg = messages.find((m) => m.id === msgId)
+    if (!msg?.limite || msg.limite.status !== 'pendiente') return
+    setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, limite: { ...m.limite, status: 'procesando' } } : m)))
+    try {
+      const est = await comprarPaqueteSasha(activeEmpresaId)
+      setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, limite: { ...m.limite, status: 'ok', estado: est } } : m)))
+      handleSendMessage(msg.limite.query, { reintento: true })
+    } catch (err) {
+      setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, limite: { ...m.limite, status: 'error', error: err.message } } : m)))
+    }
+  }
 
   const estadoSasha = isRecording ? 'listening' : isProcessing ? 'thinking' : isSpeaking ? 'speaking' : 'idle'
   const textoEstado = isRecording ? 'Escuchándote…' : isProcessing ? 'Pensando…' : isSpeaking ? 'Hablando…' : 'Lista para ayudarte'
@@ -855,6 +890,23 @@ export default function SashaAssistant() {
                       <div className="sasha-msg-bubble">
                         {m.text}
                       </div>
+
+                      {/* Límite de consultas: el administrador suma un paquete y sigue */}
+                      {m.limite?.puedeSumar && (
+                        <div className="sasha-limite">
+                          {m.limite.status === 'ok' ? (
+                            <p className="sasha-limite-ok"><Check size={15} /> Listo: sumaste {m.limite.estado?.paquete?.consultas} consultas. Se agregan ${Number(m.limite.estado?.paquete?.precio_ars || 0).toLocaleString('es-AR')} a tu próxima factura.</p>
+                          ) : (
+                            <>
+                              <button type="button" className="sasha-limite-btn" disabled={m.limite.status === 'procesando'} onClick={() => sumarConsultas(m.id)}>
+                                {m.limite.status === 'procesando' ? 'Sumando…' : `Sumar ${m.limite.estado?.paquete?.consultas} consultas · $${Number(m.limite.estado?.paquete?.precio_ars || 0).toLocaleString('es-AR')}`}
+                              </button>
+                              <small>Se cobra en tu próxima factura. Usaste {m.limite.estado?.usados} de {m.limite.estado?.limite} este mes.</small>
+                              {m.limite.status === 'error' && <small className="sasha-limite-err">{m.limite.error}</small>}
+                            </>
+                          )}
+                        </div>
+                      )}
 
                       {/* TARJETA INTERACTIVA DE PREVIEW / VALIDACIÓN DE TURNO */}
                       {m.previewData?.tipo === 'turno' && (

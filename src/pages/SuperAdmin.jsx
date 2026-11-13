@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { esSuperAdmin } from '../lib/roles'
 import { linkWhatsApp } from '../lib/whatsapp'
-import { PLANES, planPorId, formatoPesos, PRUEBA_DIAS } from '../lib/planes'
+import { PLANES, planPorId, formatoPesos, formatoPrecio, PRUEBA_DIAS } from '../lib/planes'
 import './SuperAdmin.css'
 
 const ESTADOS = [
@@ -187,9 +187,18 @@ function Salones() {
     return {
       activos: activos.length,
       prueba: salones.filter((s) => s.estado_cuenta === 'prueba').length,
-      mensual: activos.reduce((acc, s) => acc + planPorId(s.plan).precio, 0),
+      ars: activos.filter((s) => planPorId(s.plan).moneda !== 'USD').reduce((acc, s) => acc + planPorId(s.plan).precio, 0),
+      usd: activos.filter((s) => planPorId(s.plan).moneda === 'USD').reduce((acc, s) => acc + planPorId(s.plan).precio, 0),
+      extras: salones.reduce((acc, s) => acc + Number(s.extras_a_facturar || 0), 0),
+      costoIa: salones.reduce((acc, s) => acc + Number(s.ia_costo_usd || 0), 0),
     }
   }, [salones])
+
+  const marcarFacturado = async (id) => {
+    const { error: e } = await supabase.rpc('super_extras_facturados', { p_empresa: id })
+    if (e) return setError(`No se pudo marcar: ${e.message}`)
+    setSalones((prev) => prev.map((s) => (s.id === id ? { ...s, extras_a_facturar: 0 } : s)))
+  }
 
   const entrar = (id) => {
     changeActiveEmpresaId(id)
@@ -201,7 +210,8 @@ function Salones() {
       <div className="sa-kpis">
         <div className="glass-panel"><small>Salones activos</small><strong>{totales.activos}</strong></div>
         <div className="glass-panel"><small>En prueba</small><strong>{totales.prueba}</strong></div>
-        <div className="glass-panel"><small>Facturación mensual estimada</small><strong>{formatoPesos(totales.mensual)}</strong></div>
+        <div className="glass-panel"><small>Facturación mensual estimada</small><strong>{formatoPesos(totales.ars)}{totales.usd > 0 && <> + USD {totales.usd}</>}</strong></div>
+        <div className="glass-panel"><small>Extras de Sasha a facturar</small><strong>{formatoPesos(totales.extras)}</strong><small>Costo de IA este mes: USD {totales.costoIa.toFixed(2)}</small></div>
       </div>
 
       {error && <p className="sa-error">{error}</p>}
@@ -210,7 +220,7 @@ function Salones() {
       <div className="glass-panel table-container sa-tabla">
         <table className="data-table">
           <thead>
-            <tr><th>Salón</th><th>Plan</th><th>Cuenta</th><th>Administradores</th><th>Turnos 30 días</th><th>Alta</th><th /></tr>
+            <tr><th>Salón</th><th>Plan</th><th>Cuenta</th><th>Sasha este mes</th><th>Administradores</th><th>Turnos 30 días</th><th>Alta</th><th /></tr>
           </thead>
           <tbody>
             {salones.map((s) => (
@@ -233,18 +243,47 @@ function Salones() {
                     )}
                   </div>
                 </td>
+                <td><UsoSasha s={s} onLimite={(v) => actualizar(s.id, { ia_limite_mensual: v })} onFacturado={() => marcarFacturado(s.id)} /></td>
                 <td className="sa-admins">{s.admins || <span className="sa-muted">Sin administrador</span>}</td>
                 <td>{s.turnos_30d}</td>
                 <td>{fechaCorta(s.alta_at)}</td>
                 <td><button className="btn btn-secondary sa-entrar" onClick={() => entrar(s.id)}><LogIn size={15} /> Entrar</button></td>
               </tr>
             ))}
-            {!loading && salones.length === 0 && <tr><td colSpan="7" className="sa-muted">Todavía no hay salones.</td></tr>}
+            {!loading && salones.length === 0 && <tr><td colSpan="8" className="sa-muted">Todavía no hay salones.</td></tr>}
           </tbody>
         </table>
       </div>
       <p className="sa-muted sa-nota">"Entrar" te cambia al salón para ver su sistema como lo ve el administrador. Para cambiar la contraseña de alguien, entrá al salón y usá Colaboradores.</p>
     </section>
+  )
+}
+
+function UsoSasha({ s, onLimite, onFacturado }) {
+  const usados = Number(s.ia_usados || 0)
+  const limite = Number(s.ia_limite || 0)
+  const pct = limite > 0 ? Math.min(100, Math.round((100 * usados) / limite)) : 0
+  const nivel = pct >= 100 ? 'lleno' : pct >= 80 ? 'alto' : 'ok'
+  const [editando, setEditando] = useState(false)
+  return (
+    <div className="sa-uso">
+      <div className="sa-uso-num"><strong>{usados}</strong> / {limite}</div>
+      <div className={`sa-uso-bar sa-uso-${nivel}`}><i style={{ width: `${pct}%` }} /></div>
+      {editando ? (
+        <input type="number" min="0" className="input-field sa-select" autoFocus defaultValue={s.ia_limite_mensual ?? ''} placeholder={`plan: ${planPorId(s.plan).sasha}`}
+          onBlur={(e) => { setEditando(false); const v = e.target.value === '' ? null : Math.max(0, parseInt(e.target.value, 10) || 0); if (v !== (s.ia_limite_mensual ?? null)) onLimite(v) }}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} aria-label="Tope mensual personalizado" />
+      ) : (
+        <button type="button" className="sa-link" onClick={() => setEditando(true)}>
+          {s.ia_limite_mensual != null ? `Tope propio: ${s.ia_limite_mensual}` : 'Cambiar tope'}
+        </button>
+      )}
+      {Number(s.extras_a_facturar) > 0 && (
+        <button type="button" className="sa-link sa-extra" onClick={onFacturado} title="Marcar como facturado">
+          {formatoPesos(s.extras_a_facturar)} a facturar ✓
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -316,7 +355,7 @@ function AltaSalon({ inicial, onClose, onCreado }) {
               <label>WhatsApp del salón<input className="input-field" type="tel" value={form.whatsapp} onChange={set('whatsapp')} /></label>
               <label>Plan
                 <select className="input-field" value={form.plan} onChange={set('plan')}>
-                  {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPesos(p.precio)}/mes</option>)}
+                  {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPrecio(p)}/mes</option>)}
                 </select>
               </label>
               <label>Días de prueba gratis

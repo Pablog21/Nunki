@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabaseClient'
 import './Landing.css'
 import { NunkiSymbol } from '../components/NunkiLogo'
 import SashaFace from '../components/SashaFace'
-import { PLANES, formatoPesos, PRUEBA_DIAS, DESCUENTO_ANUAL } from '../lib/planes'
+import { PLANES, formatoPrecio, formatoPesos, PRUEBA_DIAS, DESCUENTO_ANUAL, NOTA_USD, PAQUETE_SASHA } from '../lib/planes'
 
 /* ====================================================================
    CONFIGURACIÓN COMERCIAL — cambiar aquí marca, contacto y precios.
@@ -110,7 +110,7 @@ const FAQS = [
   { q: '¿Mis empleados ven la caja y las ganancias?', a: 'No, salvo que vos lo decidas. Hay perfiles de administrador y de operador: el equipo carga turnos y comandas; los números del negocio los ve el dueño.' },
   { q: '¿Mis datos están separados de otros salones?', a: 'Sí. Cada salón tiene su propio espacio, su logo y sus usuarios, y solo accede a su información.' },
   { q: '¿Qué es ' + BRAND.asistente + '?', a: 'Es la asistente con inteligencia artificial del sistema. Le hablás o le escribís y agenda turnos, arma comandas y responde consultas sobre clientes y facturación. Siempre te pide confirmación antes de guardar.' },
-  { q: '¿Cuánto cuesta?', a: `El plan Esencial cuesta ${formatoPesos(PLANES[0].precio)} por mes y el Premium ${formatoPesos(PLANES[1].precio)}. Los dos tienen ${PRUEBA_DIAS} días de prueba gratis. Si tenés varias sucursales, escribinos.` },
+  { q: '¿Cuánto cuesta?', a: `El plan Esencial cuesta ${formatoPrecio(PLANES[0])} por mes y el Premium ${formatoPrecio(PLANES[1])}. Los dos tienen ${PRUEBA_DIAS} días de prueba gratis. Si tenés varias sucursales, escribinos.` },
 ]
 
 function waLink(texto) {
@@ -490,7 +490,7 @@ export default function Landing() {
               <div key={p.id} className={`lp-plan ${p.destacado ? 'is-featured' : ''}`}>
                 {p.destacado && <span className="lp-plan-badge">WhatsApp automático</span>}
                 <h3>{p.nombre}</h3>
-                <div className="lp-plan-price">{formatoPesos(p.precio)}<small>{p.periodo}</small></div>
+                <div className="lp-plan-price">{formatoPrecio(p)}<small>{p.periodo}</small></div>
                 <p className="lp-plan-detalle">{p.detalle}</p>
                 <ul>
                   {p.items.map((it) => (
@@ -504,7 +504,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <p className="lp-note lp-plan-pie">Precios finales en pesos, IVA incluido. {DESCUENTO_ANUAL}.</p>
+          <p className="lp-note lp-plan-pie">Precios finales, IVA incluido. {NOTA_USD} {DESCUENTO_ANUAL}. ¿Necesitás más consultas a {BRAND.asistente}? Sumás {PAQUETE_SASHA.consultas} por {formatoPesos(PAQUETE_SASHA.precio_ars)} cuando quieras.</p>
         </div>
       </section>
 
@@ -595,7 +595,7 @@ export default function Landing() {
                   <label>Plan que te interesa
                     <select value={form.plan} onChange={set('plan')}>
                       <option value="">Todavía no sé</option>
-                      {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPesos(p.precio)}/mes</option>)}
+                      {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPrecio(p)}/mes</option>)}
                     </select>
                   </label>
                   <label className="lp-span2">¿Algo que quieras resolver primero?<textarea rows="3" value={form.mensaje} onChange={set('mensaje')} placeholder="Ej: la caja, las comisiones, los turnos…" /></label>

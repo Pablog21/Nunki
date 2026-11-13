@@ -29,11 +29,37 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) return json({ error: 'Sesión inválida' }, 401)
 
-    const { data: perfil } = await supabase.from('usuarios').select('id, empresa_id').eq('id', user.id).maybeSingle()
+    const { data: perfil } = await supabase.from('usuarios').select('id, empresa_id, rol').eq('id', user.id).maybeSingle()
     if (!perfil) return json({ error: 'Usuario sin salón asignado' }, 403)
 
-    // 2. Armar la consulta con límites de tamaño
-    const { prompt, systemInstruction, temperature = 0.2, history = [] } = await req.json()
+    // El superadmin puede estar mirando otro salón: se cobra al salón activo si lo manda y tiene permiso
+    const body = await req.json()
+    let empresaId = perfil.empresa_id
+    if (body?.empresaId && body.empresaId !== perfil.empresa_id && String(perfil.rol || '').toLowerCase() === 'super_admin') {
+      empresaId = body.empresaId
+    }
+    if (!empresaId) return json({ error: 'Usuario sin salón asignado' }, 403)
+
+    // 2. Control de cupo: mensual por salón y diario por usuario
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!serviceKey) return json({ error: 'Sasha no está configurada' }, 500)
+    const admin = createClient(supabaseUrl, serviceKey, { db: { schema: 'nunki' } })
+
+    const { data: estado, error: estadoError } = await admin.rpc('ia_estado', { p_empresa: empresaId })
+    if (estadoError) {
+      console.error('ia_estado', estadoError)
+      return json({ error: 'No pude verificar el cupo de Sasha' }, 500)
+    }
+    if (estado?.bloqueado) return json({ bloqueado: true, motivo: 'mensual', estado })
+
+    const inicioDia = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    const { count: usosDia } = await admin.from('ia_uso').select('id', { count: 'exact', head: true })
+      .eq('usuario_id', user.id).gte('created_at', inicioDia)
+    const { data: topeDiario } = await admin.rpc('ia_limite_diario_usuario')
+    if ((usosDia ?? 0) >= Number(topeDiario ?? 150)) return json({ bloqueado: true, motivo: 'diario', estado })
+
+    // 3. Armar la consulta con límites de tamaño
+    const { prompt, systemInstruction, temperature = 0.2, history = [] } = body
     if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 8000) {
       return json({ error: 'Consulta inválida' }, 400)
     }
@@ -66,10 +92,25 @@ Deno.serve(async (req: Request) => {
 
     const result = await response.json()
     const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+
+    // 4. Registrar el uso (tokens y costo estimado) solo si Gemini respondió
+    const meta = result.usageMetadata ?? {}
+    const entrada = Number(meta.promptTokenCount ?? 0)
+    const salida = Number(meta.candidatesTokenCount ?? 0) + Number(meta.thoughtsTokenCount ?? 0)
+    const precioEntrada = Number(Deno.env.get('GEMINI_USD_ENTRADA_M') ?? '0.30')
+    const precioSalida = Number(Deno.env.get('GEMINI_USD_SALIDA_M') ?? '2.50')
+    const costo = (entrada * precioEntrada + salida * precioSalida) / 1_000_000
+    const { error: usoError } = await admin.from('ia_uso').insert([{
+      empresa_id: empresaId, usuario_id: user.id, modelo: model,
+      tokens_entrada: entrada, tokens_salida: salida, costo_usd: Number(costo.toFixed(6)),
+    }])
+    if (usoError) console.error('ia_uso', usoError)
+
+    const uso = { usados: Number(estado?.usados ?? 0) + 1, limite: Number(estado?.limite ?? 0) }
     try {
-      return json(JSON.parse(text))
+      return json({ ...JSON.parse(text), _uso: uso })
     } catch {
-      return json({ raw: text })
+      return json({ raw: text, _uso: uso })
     }
   } catch (err) {
     console.error(err)

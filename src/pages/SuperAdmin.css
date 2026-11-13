@@ -30,7 +30,7 @@
 .sa-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
 .sa-kpis > div { padding: 1rem 1.25rem; display: grid; gap: 4px; }
 .sa-kpis small { color: var(--text-secondary, #9DB8A8); }
-.sa-kpis strong { font-size: 1.6rem; font-family: 'Space Grotesk', Inter, sans-serif; }
+.sa-kpis strong { font-size: 1.35rem; font-family: 'Space Grotesk', Inter, sans-serif; }
 .sa-tabla { overflow-x: auto; }
 .sa-tabla td { vertical-align: middle; }
 .sa-admins { max-width: 260px; font-size: 0.85rem; }
@@ -63,3 +63,13 @@
 .sa-cuenta label { display: flex; align-items: center; gap: 6px; }
 .sa-tabla td:first-child { min-width: 150px; }
 .sa-tabla table { min-width: 900px; }
+.sa-uso { display: grid; gap: 4px; min-width: 130px; }
+.sa-uso-num { font-size: 0.85rem; }
+.sa-uso-bar { height: 6px; border-radius: 6px; background: rgba(157,184,168,.15); overflow: hidden; }
+.sa-uso-bar i { display: block; height: 100%; border-radius: 6px; background: #6FC79E; }
+.sa-uso-alto i { background: #E39461; }
+.sa-uso-lleno i { background: #F08A7E; }
+.sa-link { background: none; border: 0; padding: 0; color: #E39461; font: 500 0.78rem Inter, sans-serif; cursor: pointer; text-align: left; }
+.sa-extra { color: #6FC79E; font-weight: 700; }
+.sa-kpis > div small + strong + small { font-size: 0.75rem; }
+.sa-tabla table { min-width: 1040px; }
