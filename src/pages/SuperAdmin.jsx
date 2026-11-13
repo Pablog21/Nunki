@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { esSuperAdmin } from '../lib/roles'
 import { linkWhatsApp } from '../lib/whatsapp'
-import { fechaCorta as fechaPago } from '../lib/facturacion'
+import { fechaCorta as fechaPago, iniciarSuscripcion } from '../lib/facturacion'
 import { PLANES, planPorId, formatoMonto, formatoPrecio, precioPlan, PRUEBA_DIAS, MONEDAS } from '../lib/planes'
 import Configuracion from './Configuracion'
 import '../components/Pagos.css'
@@ -308,8 +308,25 @@ function EstadoPagoCelda({ s, onRegistrar }) {
       {detalle && <small className="sa-muted">{detalle}</small>}
       {p.debito_automatico && <small className="sa-ok-txt">Débito automático</small>}
       {p.estado !== 'interna' && <button type="button" className="sa-link" onClick={onRegistrar}>Registrar pago</button>}
+      {p.estado !== 'interna' && s.moneda !== 'USD' && !p.debito_automatico && (
+        <button type="button" className="sa-link" onClick={() => linkDebito(s)}>Link de débito</button>
+      )}
     </div>
   )
+}
+
+// Genera el link de suscripción de Mercado Pago para un salón y lo copia/abre
+async function linkDebito(s) {
+  const sugerido = (s.admins || '').match(/<([^>]+)>/)?.[1] || ''
+  const email = window.prompt(`Email de la cuenta de Mercado Pago que va a pagar ${s.nombre}.\nTiene que ser distinta de tu cuenta de Mercado Pago (la que cobra).`, sugerido)
+  if (!email) return
+  try {
+    const url = await iniciarSuscripcion({ email, empresaId: s.id })
+    try { await navigator.clipboard.writeText(url) } catch { /* sin portapapeles */ }
+    window.open(url, '_blank', 'noopener')
+  } catch (err) {
+    window.alert(err.message)
+  }
 }
 
 function RegistrarPago({ s, onClose, onListo }) {

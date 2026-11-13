@@ -25,6 +25,13 @@ async function firmaValida(req: Request, dataId: string, secret: string) {
 }
 
 Deno.serve(async (req: Request) => {
+  // GET: chequeo de configuración (no expone las claves)
+  if (req.method === 'GET') {
+    return new Response(JSON.stringify({
+      access_token: Boolean(Deno.env.get('MP_ACCESS_TOKEN')),
+      webhook_secret: Boolean(Deno.env.get('MP_WEBHOOK_SECRET')),
+    }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+  }
   if (req.method !== 'POST') return ok()
   const mpToken = Deno.env.get('MP_ACCESS_TOKEN')
   const secret = Deno.env.get('MP_WEBHOOK_SECRET')
