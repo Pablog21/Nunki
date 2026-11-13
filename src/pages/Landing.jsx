@@ -8,6 +8,7 @@ import {
 import { supabase } from '../lib/supabaseClient'
 import './Landing.css'
 import { NunkiSymbol } from '../components/NunkiLogo'
+import SashaFace from '../components/SashaFace'
 
 /* ====================================================================
    CONFIGURACIÓN COMERCIAL — cambiar aquí marca, contacto y precios.
@@ -124,6 +125,7 @@ export default function Landing() {
   const [showSticky, setShowSticky] = useState(false)
   const [chatLog, setChatLog] = useState([])
   const [typing, setTyping] = useState(false)
+  const [hablando, setHablando] = useState(false)
   const [openFaq, setOpenFaq] = useState(0)
   const [contactOpen, setContactOpen] = useState(false)
   const [sending, setSending] = useState(false)
@@ -161,6 +163,8 @@ export default function Landing() {
     }, 600)
   }
 
+  const estadoSasha = typing ? 'thinking' : hablando ? 'speaking' : 'idle'
+
   const runChat = (i) => {
     if (typing) return
     const item = DEMO_CHAT[i]
@@ -170,6 +174,8 @@ export default function Landing() {
     setTimeout(() => {
       setChatLog((log) => [...log, { from: 'bot', text: item.respuesta, accion: item.accion }])
       setTyping(false)
+      setHablando(true)
+      setTimeout(() => setHablando(false), 2200)
     }, 900)
   }
 
@@ -399,12 +405,19 @@ export default function Landing() {
           </div>
           <div className="lp-chat">
             <div className="lp-chat-head">
-              <span className="lp-dot" /> {BRAND.asistente}
+              <SashaFace size={36} estado={estadoSasha} animada={false} />
+              <div className="lp-chat-who">
+                <strong>{BRAND.asistente}</strong>
+                <span><span className={`lp-dot lp-dot-${estadoSasha}`} /> {estadoSasha === 'thinking' ? 'Pensando…' : estadoSasha === 'speaking' ? 'Hablando…' : 'Lista para ayudarte'}</span>
+              </div>
               <small>Demo · tocá una pregunta</small>
+            </div>
+            <div className="lp-chat-stage">
+              <SashaFace size={104} estado={estadoSasha} />
             </div>
             <div className="lp-chat-body">
               {chatLog.length === 0 && (
-                <div className="lp-msg lp-msg-bot">Hola, soy {BRAND.asistente}. ¿Qué necesitás en el salón?</div>
+                <div className="lp-msg lp-msg-bot">¡Buen día, Caro! Hoy tenés 9 turnos; el próximo es a las 10:30 con Martina. Mañana hay 4 sin recordatorio. ¿Te los preparo?</div>
               )}
               {chatLog.map((m, i) => (
                 <div key={i} className={`lp-msg ${m.from === 'user' ? 'lp-msg-user' : 'lp-msg-bot'}`}>

@@ -115,9 +115,14 @@
 .lp-ai-list svg { color: #E39461; flex: none; }
 .lp-chat { background: #133129; border: 1px solid #24483F; border-radius: 22px; overflow: hidden; }
 .lp-chat-head { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid #24483F; font-weight: 600; color: #fff; }
+.lp-chat-who { display: grid; gap: 2px; line-height: 1.2; }
+.lp-chat-who span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #9DB8A8; }
+.lp-dot.lp-dot-thinking { background: #E39461; box-shadow: 0 0 0 4px rgba(227,148,97,.2); }
+.lp-dot.lp-dot-speaking { background: #D9824A; box-shadow: 0 0 0 4px rgba(217,130,74,.25); }
+.lp-chat-stage { display: grid; place-items: center; padding: 18px 0 14px; border-bottom: 1px solid #24483F; background: radial-gradient(circle at 50% 55%, rgba(217,130,74,.16), transparent 60%); }
 .lp-chat-head small { margin-left: auto; color: #9DB8A8; font-weight: 500; }
 .lp-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 4px rgba(52,211,153,.18); }
-.lp-chat-body { padding: 18px; min-height: 250px; max-height: 330px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.lp-chat-body { padding: 18px; min-height: 150px; max-height: 330px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
 .lp-msg { max-width: 86%; padding: 11px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.45; }
 .lp-msg-bot { background: #1A3E35; color: #EDF1EE; border-bottom-left-radius: 4px; }
 .lp-msg-user { background: var(--lp-grad); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
