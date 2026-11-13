@@ -1,0 +1,633 @@
+/* =========================================================
+   SASHA AI ASSISTANT STYLES
+   ========================================================= */
+
+.sasha-floating-trigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #B4612A 0%, #3F8F86 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 50px;
+  padding: 10px 18px 10px 14px;
+  cursor: pointer;
+  box-shadow: 0 10px 25px -5px rgba(180, 97, 42, 0.5), 0 8px 10px -6px rgba(47, 127, 120, 0.4);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sasha-floating-trigger:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 15px 30px -5px rgba(180, 97, 42, 0.6), 0 10px 12px -5px rgba(47, 127, 120, 0.5);
+}
+
+.sasha-floating-trigger:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.sasha-avatar-badge {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sasha-pulse-ring {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  animation: sashaPulse 2s infinite;
+}
+
+@keyframes sashaPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.25); opacity: 0; }
+  100% { transform: scale(0.95); opacity: 0; }
+}
+
+/* Modal Window */
+.sasha-window {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  height: 620px;
+  max-height: calc(100vh - 48px);
+  z-index: 9995;
+  background: var(--surface-card, #1e1e2d);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: sashaSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sashaSlideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header */
+.sasha-header {
+  padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(180, 97, 42, 0.15) 0%, rgba(47, 127, 120, 0.15) 100%);
+  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sasha-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sasha-header-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #B4612A, #3F8F86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(180, 97, 42, 0.3);
+}
+
+.sasha-header-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sasha-header-status {
+  font-size: 0.75rem;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sasha-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sasha-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.sasha-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #fff);
+}
+
+.sasha-icon-btn.active {
+  color: #B4612A;
+  background: rgba(180, 97, 42, 0.15);
+}
+
+/* Voice Settings Bar */
+.sasha-voice-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(180, 97, 42, 0.08);
+  border-bottom: 1px solid rgba(180, 97, 42, 0.15);
+  animation: sashaFadeIn 0.2s ease-out;
+}
+
+.sasha-voice-select {
+  flex: 1;
+  background: var(--surface-hover, #1e1e2d);
+  color: var(--text-primary, #fff);
+  border: 1px solid rgba(180, 97, 42, 0.3);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+/* Chat Messages Area */
+.sasha-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sasha-msg {
+  display: flex;
+  gap: 10px;
+  max-width: 90%;
+  animation: sashaFadeIn 0.25s ease-out;
+}
+
+@keyframes sashaFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sasha-msg.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.sasha-msg.assistant {
+  align-self: flex-start;
+}
+
+.sasha-msg-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.sasha-msg.user .sasha-msg-bubble {
+  background: linear-gradient(135deg, #B4612A 0%, #9A5223 100%);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+}
+
+.sasha-msg.assistant .sasha-msg-bubble {
+  background: var(--surface-border, rgba(255, 255, 255, 0.06));
+  color: var(--text-primary, #e2e8f0);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom-left-radius: 4px;
+}
+
+.sasha-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
+.sasha-msg.assistant .sasha-msg-avatar {
+  background: linear-gradient(135deg, #B4612A, #3F8F86);
+  color: #fff;
+}
+
+/* Suggestion Chips */
+.sasha-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px;
+  max-height: 85px;
+  overflow-y: auto;
+  align-items: center;
+}
+
+.sasha-chips-container::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.sasha-chips-container::-webkit-scrollbar-thumb {
+  background: rgba(180, 97, 42, 0.35);
+  border-radius: 4px;
+}
+
+.sasha-chip {
+  background: rgba(180, 97, 42, 0.12);
+  border: 1px solid rgba(180, 97, 42, 0.25);
+  color: var(--primary-color, #E39461);
+  font-size: 0.74rem;
+  font-weight: 500;
+  padding: 5px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sasha-chip:hover {
+  background: rgba(180, 97, 42, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Interactive Preview Cards (MANDATORY CONFIRMATION BEFORE SAVE) */
+.sasha-preview-card {
+  width: 100%;
+  background: var(--surface-hover, rgba(30, 30, 45, 0.95));
+  border: 1.5px solid #B4612A;
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.sasha-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(180, 97, 42, 0.2);
+  color: #E39461;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.sasha-preview-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  margin-bottom: 10px;
+}
+
+.sasha-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sasha-preview-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sasha-preview-field.full {
+  grid-column: span 2;
+}
+
+.sasha-preview-field label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.sasha-preview-field input,
+.sasha-preview-field select {
+  font-size: 0.8rem;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: var(--text-primary, #fff);
+  outline: none;
+}
+
+.sasha-preview-field input:focus,
+.sasha-preview-field select:focus {
+  border-color: #B4612A;
+}
+
+.sasha-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 0.78rem;
+}
+
+.sasha-items-table th {
+  text-align: left;
+  padding: 5px 6px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sasha-items-table td {
+  padding: 6px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sasha-preview-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #10b981;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sasha-preview-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sasha-btn-confirm {
+  flex: 1;
+  background: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.sasha-btn-confirm:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.sasha-btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary, #cbd5e1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sasha-btn-cancel:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Confirmed Card */
+.sasha-confirmed-card {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 8px;
+  color: #10b981;
+  font-size: 0.84rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Input Area & Mic */
+.sasha-footer {
+  padding: 12px 14px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.03));
+  border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sasha-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sasha-text-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.12));
+  border-radius: 24px;
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  color: var(--text-primary, #fff);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.sasha-text-input:focus {
+  border-color: #B4612A;
+}
+
+.sasha-mic-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(180, 97, 42, 0.15);
+  color: #E39461;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.sasha-mic-btn:hover {
+  background: rgba(180, 97, 42, 0.3);
+  color: #a5b4fc;
+}
+
+.sasha-mic-btn.recording {
+  background: #ef4444;
+  color: #fff;
+  animation: sashaRecordPulse 1.2s infinite;
+}
+
+@keyframes sashaRecordPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.sasha-send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #B4612A;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sasha-send-btn:hover {
+  background: #9A5223;
+  transform: scale(1.05);
+}
+
+.sasha-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.sasha-recording-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Light Theme Overrides */
+body.light-theme .sasha-window {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.15);
+}
+
+body.light-theme .sasha-msg.assistant .sasha-msg-bubble {
+  background: #f1f5f9;
+  color: #0B1F1A;
+  border-color: #e2e8f0;
+}
+
+body.light-theme .sasha-preview-card {
+  background: #f8fafc;
+  border-color: #B4612A;
+}
+
+body.light-theme .sasha-preview-field input,
+body.light-theme .sasha-preview-field select,
+body.light-theme .sasha-text-input {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0B1F1A;
+}
+
+/* Mobile Responsive Adjustments for Sasha Assistant */
+@media (max-width: 900px) {
+  .sasha-floating-trigger {
+    bottom: 74px;
+    right: 14px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    box-shadow: 0 6px 18px rgba(180, 97, 42, 0.4);
+  }
+
+  .sasha-avatar-badge {
+    width: 28px;
+    height: 28px;
+  }
+
+  .sasha-window {
+    bottom: 70px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-width: none;
+    height: calc(100vh - 145px);
+    height: calc(100dvh - 145px);
+    max-height: 560px;
+    border-radius: 16px;
+  }
+
+  .sasha-header {
+    padding: 10px 14px;
+  }
+
+  .sasha-body {
+    padding: 12px;
+  }
+
+  .sasha-footer {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sasha-floating-trigger {
+    padding: 8px;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+
+  .sasha-floating-trigger span {
+    display: none;
+  }
+}

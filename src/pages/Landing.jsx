@@ -1,0 +1,543 @@
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  ArrowRight, Calendar, Receipt, Wallet, Percent, Package, ShoppingCart,
+  BarChart3, Mic, Send, Check, ChevronDown, X, MessageCircle,
+  Scissors, Smartphone, ShieldCheck, Palette, Sparkles, Clock
+} from 'lucide-react'
+import { supabase } from '../lib/supabaseClient'
+import './Landing.css'
+import { NunkiSymbol } from '../components/NunkiLogo'
+
+/* ====================================================================
+   CONFIGURACIÓN COMERCIAL — cambiar aquí marca, contacto y precios.
+   Todo el texto de la landing toma estos valores.
+   ==================================================================== */
+const BRAND = {
+  nombre: 'Nunki',
+  asistente: 'Sasha',
+  // WhatsApp comercial en formato internacional sin "+" ni espacios, ej: '5493512345678'.
+  // Si queda vacío, los botones usan el formulario + email.
+  whatsapp: '',
+  email: 'pablomgomez21@gmail.com',
+}
+
+// Dejar vacío para ocultar la sección de precios (se muestra "Pedí tu cotización").
+// Ejemplo: { nombre: 'Salón', precio: '$ 00.000', periodo: '/mes', detalle: 'Hasta 5 profesionales', items: ['Agenda', 'Caja'], destacado: true }
+const PLANES = []
+
+const VIDEOS = [
+  '3996899-uhd_2160_4096_25fps.mp4',
+  '5885774-hd_1080_1920_25fps.mp4',
+  '6663336-uhd_2160_3744_30fps.mp4',
+  '7440200-uhd_2160_4096_25fps.mp4',
+  '7450929-uhd_2160_4096_25fps.mp4',
+  '8102244-uhd_2160_4096_25fps.mp4',
+  '8331940-uhd_2160_4096_25fps.mp4',
+  '8488854-hd_1080_1920_25fps.mp4',
+]
+
+const ars = (n) => '$ ' + Math.round(n).toLocaleString('es-AR')
+
+const DOLORES = [
+  { dolor: 'La caja no cierra y no sabés dónde está la diferencia.', solucion: 'Cada comanda registra efectivo, tarjeta y transferencia por separado. El cierre se calcula solo y queda controlado por el dueño.' },
+  { dolor: 'Las comisiones se calculan a mano, en cuaderno o Excel.', solucion: 'El porcentaje de cada profesional se aplica al cobrar. La liquidación del período sale con un clic, incluso en trabajos compartidos.' },
+  { dolor: 'La tintura se termina justo el día que la necesitás.', solucion: 'Cada servicio tiene su receta de insumos y descuenta el stock al cobrarse. Ves qué se está terminando antes de que falte.' },
+  { dolor: 'No sabés qué clientas dejaron de venir.', solucion: 'Ficha de cada cliente con historial de servicios y última visita. Le preguntás a ' + BRAND.asistente + ' y te responde al instante.' },
+]
+
+const MODULOS = [
+  { icon: Calendar, titulo: 'Agenda y reserva online', texto: 'Turnos por profesional y un link propio para que tus clientes reserven solos, las 24 horas.' },
+  { icon: MessageCircle, titulo: 'Recordatorios por WhatsApp', texto: 'Los turnos de mañana, con el mensaje listo para enviar con un toque. Incluido, sin costo por mensaje.' },
+  { icon: Receipt, titulo: 'Comandas', texto: 'Servicios y productos de cada visita, con trabajos compartidos entre profesionales.' },
+  { icon: Wallet, titulo: 'Caja diaria', texto: 'Pagos mixtos, movimientos, retiros y cierre con control del dueño.' },
+  { icon: Percent, titulo: 'Comisiones y liquidaciones', texto: 'Porcentajes por profesional y liquidaciones del período sin planillas.' },
+  { icon: Package, titulo: 'Stock por receta', texto: 'Insumos asociados a cada servicio que se descuentan automáticamente.' },
+  { icon: ShoppingCart, titulo: 'Compras y gastos', texto: 'Facturas de proveedores, gastos con tarjeta y su impacto en el mes.' },
+  { icon: BarChart3, titulo: 'Tablero y equipo', texto: 'Facturación, rendimiento de cada profesional y asistencias del equipo.' },
+]
+
+const DEMO_CHAT = [
+  {
+    pregunta: 'Agendá a Lucía mañana a las 15 con Marcos, corte y color',
+    respuesta: 'Listo para confirmar: Lucía Fernández, mañana 15:00 con Marcos. Corte + Color (2 h 30 min). ¿Lo agendo?',
+    accion: 'Turno propuesto',
+  },
+  {
+    pregunta: '¿Hace cuánto no viene Ana Martín?',
+    respuesta: 'Ana Martín vino por última vez hace 47 días. Se hizo Balayage + Nutrición con Sofía.',
+    accion: 'Historial consultado',
+  },
+  {
+    pregunta: '¿Cuánto facturamos hoy?',
+    respuesta: 'Hoy van 14 comandas por ' + ars(386500) + ': efectivo ' + ars(152000) + ', tarjeta ' + ars(141500) + ' y transferencia ' + ars(93000) + '.',
+    accion: 'Resumen de caja',
+  },
+  {
+    pregunta: 'Armá la comanda de Julia: brushing y un shampoo',
+    respuesta: 'Comanda lista: Julia Pérez — Brushing ' + ars(18000) + ' + Shampoo Hidratante ' + ars(24500) + '. Total ' + ars(42500) + '. ¿La guardo?',
+    accion: 'Comanda propuesta',
+  },
+]
+
+const PASOS = [
+  { titulo: 'Te lo mostramos', texto: 'Una demo corta, con ejemplos de un salón real, para ver si se adapta a cómo trabajás.' },
+  { titulo: 'Cargamos tu salón', texto: 'Servicios, precios, equipo, comisiones y tu logo. Lo configuramos con vos.' },
+  { titulo: 'Tu equipo lo usa', texto: 'Desde el celular, la tablet de recepción o la PC. Cada uno con su usuario y permisos.' },
+]
+
+const FAQS = [
+  { q: '¿Tengo que instalar algo?', a: 'No. Funciona desde el navegador y se puede agregar a la pantalla de inicio del celular como una app, con el logo de tu salón.' },
+  { q: '¿Mis clientes pueden sacar turno solos?', a: 'Sí. Cada salón tiene su link de reservas para poner en Instagram, Google Maps o WhatsApp. El cliente elige servicio, profesional y horario libre, y el turno aparece en tu agenda.' },
+  { q: '¿Sirve para barberías?', a: 'Sí. Agenda, comandas, caja y comisiones funcionan igual para peluquerías, barberías y salones con varios profesionales.' },
+  { q: '¿Mis empleados ven la caja y las ganancias?', a: 'No, salvo que vos lo decidas. Hay perfiles de administrador y de operador: el equipo carga turnos y comandas; los números del negocio los ve el dueño.' },
+  { q: '¿Mis datos están separados de otros salones?', a: 'Sí. Cada salón tiene su propio espacio, su logo y sus usuarios, y solo accede a su información.' },
+  { q: '¿Qué es ' + BRAND.asistente + '?', a: 'Es la asistente con inteligencia artificial del sistema. Le hablás o le escribís y agenda turnos, arma comandas y responde consultas sobre clientes y facturación. Siempre te pide confirmación antes de guardar.' },
+  { q: '¿Cuánto cuesta?', a: PLANES.length ? 'Mirá los planes más arriba. Si tenés varias sucursales, escribinos.' : 'Depende de la cantidad de profesionales de tu salón. Escribinos y te pasamos una cotización el mismo día.' },
+]
+
+function waLink(texto) {
+  if (!BRAND.whatsapp) return null
+  return `https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(texto)}`
+}
+
+export default function Landing() {
+  const navigate = useNavigate()
+  const [videoIndex, setVideoIndex] = useState(() => Math.floor(Math.random() * VIDEOS.length))
+  const [videoVisible, setVideoVisible] = useState(true)
+  const [chatUsed, setChatUsed] = useState([])
+  const [showSticky, setShowSticky] = useState(false)
+  const [chatLog, setChatLog] = useState([])
+  const [typing, setTyping] = useState(false)
+  const [openFaq, setOpenFaq] = useState(0)
+  const [contactOpen, setContactOpen] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [form, setForm] = useState({ nombre: '', salon: '', telefono: '', email: '', profesionales: '', mensaje: '' })
+
+  // Calculadora: tiempo administrativo recuperado
+  const [profesionales, setProfesionales] = useState(4)
+  const [minCaja, setMinCaja] = useState(30)
+  const [hsComisiones, setHsComisiones] = useState(4)
+
+  useEffect(() => {
+    document.body.classList.add('light-theme')
+    document.title = `${BRAND.nombre} — Gestión para peluquerías y barberías`
+    const onScroll = () => setShowSticky(window.scrollY > 520)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      document.body.classList.remove('light-theme')
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [])
+
+  const horasMes = useMemo(() => {
+    const caja = (minCaja * 26) / 60
+    const comisiones = hsComisiones
+    const consultas = profesionales * 0.75
+    return Math.round(caja + comisiones + consultas)
+  }, [profesionales, minCaja, hsComisiones])
+
+  const nextVideo = () => {
+    setVideoVisible(false)
+    setTimeout(() => {
+      setVideoIndex((i) => (i + 1) % VIDEOS.length)
+      setVideoVisible(true)
+    }, 600)
+  }
+
+  const runChat = (i) => {
+    if (typing) return
+    const item = DEMO_CHAT[i]
+    setChatUsed((u) => [...u, i])
+    setChatLog((log) => [...log, { from: 'user', text: item.pregunta }])
+    setTyping(true)
+    setTimeout(() => {
+      setChatLog((log) => [...log, { from: 'bot', text: item.respuesta, accion: item.accion }])
+      setTyping(false)
+    }, 900)
+  }
+
+  const abrirContacto = () => {
+    setSent(false)
+    setContactOpen(true)
+  }
+
+  const ctaPrincipal = () => {
+    const link = waLink(`Hola! Tengo un salón y quiero ver una demo de ${BRAND.nombre}.`)
+    if (link) window.open(link, '_blank', 'noopener')
+    else abrirContacto()
+  }
+
+  const enviar = async (e) => {
+    e.preventDefault()
+    setSending(true)
+    try {
+      await supabase.from('contactos_landing').insert([{
+        nombre: form.nombre,
+        salon: form.salon,
+        telefono: form.telefono,
+        email: form.email,
+        mensaje: [form.profesionales && `Profesionales: ${form.profesionales}`, form.mensaje].filter(Boolean).join(' — '),
+      }])
+    } catch (err) {
+      console.warn('No se pudo guardar el contacto en la base:', err)
+    }
+    const texto =
+      `Hola! Soy ${form.nombre}, de ${form.salon}.\n` +
+      (form.profesionales ? `Somos ${form.profesionales} profesionales.\n` : '') +
+      `Tel: ${form.telefono}${form.email ? ` · ${form.email}` : ''}\n` +
+      (form.mensaje ? `\n${form.mensaje}` : '')
+    const link = waLink(texto)
+    if (link) {
+      window.open(link, '_blank', 'noopener')
+    } else {
+      const subject = encodeURIComponent(`Demo ${BRAND.nombre} — ${form.salon}`)
+      window.open(`mailto:${BRAND.email}?subject=${subject}&body=${encodeURIComponent(texto)}`, '_blank')
+    }
+    setSending(false)
+    setSent(true)
+  }
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  return (
+    <div className="lp">
+      {/* NAV */}
+      <header className="lp-nav">
+        <div className="lp-wrap lp-nav-in">
+          <a href="#top" className="lp-brand">
+            <NunkiSymbol size={34} />
+            <span>{BRAND.nombre}</span>
+          </a>
+          <nav className="lp-links">
+            <a href="#funciones">Funciones</a>
+            <a href="#asistente">{BRAND.asistente}</a>
+            <a href="#como">Cómo empezar</a>
+            <a href="#faq">Preguntas</a>
+          </nav>
+          <div className="lp-nav-cta">
+            <button className="lp-btn lp-btn-ghost" onClick={() => navigate('/login')}>Ingresar</button>
+            <button className="lp-btn lp-btn-dark lp-hide-sm" onClick={ctaPrincipal}>Pedir demo</button>
+          </div>
+        </div>
+      </header>
+
+      {/* HERO */}
+      <section className="lp-hero" id="top">
+        <video
+          key={videoIndex}
+          className="lp-hero-video"
+          style={{ opacity: videoVisible ? 1 : 0 }}
+          src={`/videos/${VIDEOS[videoIndex]}`}
+          autoPlay muted playsInline
+          onEnded={nextVideo}
+        />
+        <div className="lp-hero-veil" />
+        <div className="lp-wrap lp-hero-grid">
+          <div className="lp-hero-copy">
+            <span className="lp-eyebrow"><Scissors size={14} /> Para peluquerías y barberías</span>
+            <h1>
+              Turnos, caja y comisiones.<br />
+              <em>Tu salón o barbería, bajo control.</em>
+            </h1>
+            <p className="lp-lead">
+              {BRAND.nombre} reemplaza el cuaderno, el Excel y las cuentas de fin de mes.
+              Tus clientes reservan online, les recordás el turno por WhatsApp con un toque y, con {BRAND.asistente}, tu asistente con IA, armás comandas con solo hablarle.
+            </p>
+            <div className="lp-hero-cta">
+              <button className="lp-btn lp-btn-primary lp-btn-lg" onClick={ctaPrincipal}>
+                {BRAND.whatsapp ? <MessageCircle size={18} /> : null}
+                Quiero ver una demo <ArrowRight size={18} />
+              </button>
+              <a href="#funciones" className="lp-btn lp-btn-ghost lp-btn-lg">Ver qué incluye</a>
+            </div>
+            <ul className="lp-trust">
+              <li><Smartphone size={15} /> Celular, tablet o PC</li>
+              <li><Palette size={15} /> Con el logo de tu salón</li>
+              <li><ShieldCheck size={15} /> Permisos por empleado</li>
+            </ul>
+          </div>
+
+          {/* Mock del cierre de caja */}
+          <div className="lp-mock" aria-hidden="true">
+            <div className="lp-mock-head">
+              <span>Caja de hoy</span>
+              <span className="lp-pill-ok">Cerrada y controlada</span>
+            </div>
+            <div className="lp-mock-total">
+              <small>Total cobrado</small>
+              <strong>{ars(386500)}</strong>
+              <span>14 comandas · 6 profesionales</span>
+            </div>
+            <div className="lp-mock-split">
+              {[['Efectivo', 152000, 39], ['Tarjeta', 141500, 37], ['Transferencia', 93000, 24]].map(([n, v, p]) => (
+                <div key={n}>
+                  <div className="lp-mock-row"><span>{n}</span><b>{ars(v)}</b></div>
+                  <div className="lp-bar"><i style={{ width: p + '%' }} /></div>
+                </div>
+              ))}
+            </div>
+            <div className="lp-mock-list">
+              <div className="lp-mock-sub">Comisiones del día</div>
+              {[['Marcos', 38400], ['Sofía', 31250], ['Lucas · barbería', 22800]].map(([n, v]) => (
+                <div className="lp-mock-row" key={n}><span>{n}</span><b>{ars(v)}</b></div>
+              ))}
+            </div>
+            <div className="lp-mock-alert"><Package size={14} /> Quedan 2 tinturas 7.1 — sugerido reponer</div>
+          </div>
+        </div>
+      </section>
+
+      {/* DOLORES */}
+      <section className="lp-section lp-pains">
+        <div className="lp-wrap">
+          <h2 className="lp-h2">¿Te suena alguna de estas?</h2>
+          <div className="lp-pain-grid">
+            {DOLORES.map((d) => (
+              <article key={d.dolor} className="lp-pain">
+                <p className="lp-pain-q">“{d.dolor}”</p>
+                <p className="lp-pain-a"><Check size={16} /> {d.solucion}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FUNCIONES */}
+      <section className="lp-section" id="funciones">
+        <div className="lp-wrap">
+          <span className="lp-kicker">Todo lo que incluye</span>
+          <h2 className="lp-h2">Un solo sistema para el salón entero</h2>
+          <p className="lp-sub">Sin módulos sueltos ni planillas paralelas: lo que se cobra en la comanda impacta en la caja, las comisiones y el stock al mismo tiempo.</p>
+          <div className="lp-mod-grid">
+            {MODULOS.map(({ icon: Icon, titulo, texto }) => (
+              <div className="lp-mod" key={titulo}>
+                <div className="lp-mod-icon"><Icon size={20} /></div>
+                <h3>{titulo}</h3>
+                <p>{texto}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ASISTENTE */}
+      <section className="lp-section lp-dark" id="asistente">
+        <div className="lp-wrap lp-ai-grid">
+          <div>
+            <span className="lp-kicker lp-kicker-light"><Sparkles size={14} /> Asistente con IA</span>
+            <h2 className="lp-h2">Conocé a {BRAND.asistente}: le hablás y lo hace</h2>
+            <p className="lp-sub lp-sub-light">
+              Con las manos ocupadas, le pedís por voz que agende un turno o arme la comanda.
+              {' '}{BRAND.asistente} entiende nombres, servicios y horarios, y siempre te muestra lo que va a guardar antes de confirmarlo.
+            </p>
+            <ul className="lp-ai-list">
+              <li><Mic size={16} /> Dictado por voz y respuesta hablada</li>
+              <li><Calendar size={16} /> Agenda turnos con profesional y horario</li>
+              <li><Receipt size={16} /> Arma comandas con servicios y productos</li>
+              <li><Clock size={16} /> Responde última visita, último servicio y facturación</li>
+            </ul>
+          </div>
+          <div className="lp-chat">
+            <div className="lp-chat-head">
+              <span className="lp-dot" /> {BRAND.asistente}
+              <small>Demo · tocá una pregunta</small>
+            </div>
+            <div className="lp-chat-body">
+              {chatLog.length === 0 && (
+                <div className="lp-msg lp-msg-bot">Hola, soy {BRAND.asistente}. ¿Qué necesitás en el salón?</div>
+              )}
+              {chatLog.map((m, i) => (
+                <div key={i} className={`lp-msg ${m.from === 'user' ? 'lp-msg-user' : 'lp-msg-bot'}`}>
+                  {m.text}
+                  {m.accion && <span className="lp-msg-tag"><Check size={12} /> {m.accion}</span>}
+                </div>
+              ))}
+              {typing && <div className="lp-msg lp-msg-bot lp-typing"><i /><i /><i /></div>}
+            </div>
+            <div className="lp-chat-chips">
+              {DEMO_CHAT.map((c, i) => (
+                <button key={c.pregunta} disabled={typing || chatUsed.includes(i)} onClick={() => runChat(i)}>
+                  <Send size={12} /> {c.pregunta}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PARA QUIÉN */}
+      <section className="lp-section">
+        <div className="lp-wrap">
+          <h2 className="lp-h2">Pensado para cómo trabaja tu salón</h2>
+          <div className="lp-who-grid">
+            <div className="lp-who">
+              <h3>Peluquerías</h3>
+              <p>Coloración con receta de insumos, servicios largos en la agenda y trabajos compartidos entre colorista y estilista, cada uno con su comisión.</p>
+            </div>
+            <div className="lp-who">
+              <h3>Barberías</h3>
+              <p>Turnos cortos y seguidos, venta de productos en la misma comanda y la caja del día cerrada en minutos, aunque cobren varios barberos.</p>
+            </div>
+            <div className="lp-who">
+              <h3>Salones con equipo</h3>
+              <p>Asistencias, liquidaciones y permisos: el equipo carga su trabajo y el dueño controla caja, compras y resultados desde cualquier lugar.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CALCULADORA */}
+      <section className="lp-section lp-tint">
+        <div className="lp-wrap lp-calc">
+          <div>
+            <span className="lp-kicker">Hacé la cuenta</span>
+            <h2 className="lp-h2">¿Cuántas horas por mes se van en administrar?</h2>
+            <p className="lp-sub">Mové los valores según tu salón. Es el tiempo que hoy se va en cerrar la caja, calcular comisiones y buscar datos de clientes.</p>
+          </div>
+          <div className="lp-calc-card">
+            <label>
+              <span>Profesionales en el salón <b>{profesionales}</b></span>
+              <input type="range" min="1" max="20" value={profesionales} onChange={(e) => setProfesionales(+e.target.value)} />
+            </label>
+            <label>
+              <span>Minutos por día cerrando la caja <b>{minCaja}</b></span>
+              <input type="range" min="5" max="90" step="5" value={minCaja} onChange={(e) => setMinCaja(+e.target.value)} />
+            </label>
+            <label>
+              <span>Horas por mes calculando comisiones <b>{hsComisiones}</b></span>
+              <input type="range" min="0" max="20" value={hsComisiones} onChange={(e) => setHsComisiones(+e.target.value)} />
+            </label>
+            <div className="lp-calc-out">
+              <strong>{horasMes} h</strong>
+              <span>por mes de trabajo administrativo que el sistema hace por vos</span>
+            </div>
+            <small className="lp-note">Estimación con 26 días hábiles y unos 45 minutos mensuales por profesional en consultas y planillas.</small>
+          </div>
+        </div>
+      </section>
+
+      {/* PLANES (opcional) */}
+      {PLANES.length > 0 && (
+        <section className="lp-section" id="planes">
+          <div className="lp-wrap">
+            <h2 className="lp-h2">Planes</h2>
+            <div className="lp-plan-grid">
+              {PLANES.map((p) => (
+                <div key={p.nombre} className={`lp-plan ${p.destacado ? 'is-featured' : ''}`}>
+                  <h3>{p.nombre}</h3>
+                  <div className="lp-plan-price">{p.precio}<small>{p.periodo}</small></div>
+                  <p>{p.detalle}</p>
+                  <ul>{p.items.map((it) => <li key={it}><Check size={14} /> {it}</li>)}</ul>
+                  <button className="lp-btn lp-btn-dark" onClick={ctaPrincipal}>Empezar</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* CÓMO EMPEZAR */}
+      <section className="lp-section" id="como">
+        <div className="lp-wrap">
+          <h2 className="lp-h2">Empezar es simple</h2>
+          <ol className="lp-steps">
+            {PASOS.map((p, i) => (
+              <li key={p.titulo}>
+                <span className="lp-step-n">{i + 1}</span>
+                <h3>{p.titulo}</h3>
+                <p>{p.texto}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="lp-section lp-tint" id="faq">
+        <div className="lp-wrap lp-faq-wrap">
+          <h2 className="lp-h2">Preguntas frecuentes</h2>
+          <div className="lp-faq">
+            {FAQS.map((f, i) => (
+              <div key={f.q} className={`lp-faq-item ${openFaq === i ? 'is-open' : ''}`}>
+                <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)}>
+                  {f.q} <ChevronDown size={18} />
+                </button>
+                {openFaq === i && <p>{f.a}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA FINAL */}
+      <section className="lp-final">
+        <div className="lp-wrap">
+          <h2>Ordená tu salón esta semana</h2>
+          <p>Contanos cuántos profesionales son y te mostramos {BRAND.nombre} funcionando con ejemplos de tu rubro.</p>
+          <div className="lp-hero-cta lp-center">
+            <button className="lp-btn lp-btn-primary lp-btn-lg" onClick={ctaPrincipal}>
+              Quiero ver una demo <ArrowRight size={18} />
+            </button>
+            <button className="lp-btn lp-btn-light lp-btn-lg" onClick={abrirContacto}>Dejar mis datos</button>
+          </div>
+        </div>
+      </section>
+
+      <footer className="lp-footer">
+        <div className="lp-wrap lp-footer-in">
+          <span className="lp-brand lp-brand-sm"><NunkiSymbol size={24} /> {BRAND.nombre}</span>
+          <span>© {new Date().getFullYear()} {BRAND.nombre}. Gestión para peluquerías y barberías.</span>
+          <button className="lp-link" onClick={() => navigate('/login')}>Ingresar al sistema</button>
+        </div>
+      </footer>
+
+      {/* Barra fija en celular */}
+      <div className={`lp-sticky ${showSticky ? 'is-visible' : ''}`}>
+        <button className="lp-btn lp-btn-primary" onClick={ctaPrincipal}>Quiero ver una demo <ArrowRight size={16} /></button>
+      </div>
+
+      {/* MODAL CONTACTO */}
+      {contactOpen && (
+        <div className="lp-modal-bg" onClick={() => setContactOpen(false)}>
+          <div className="lp-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <button className="lp-modal-x" onClick={() => setContactOpen(false)} aria-label="Cerrar"><X size={20} /></button>
+            {!sent ? (
+              <form onSubmit={enviar}>
+                <h3>Pedí tu demo</h3>
+                <p className="lp-modal-sub">Te contactamos para mostrarte el sistema con ejemplos de tu salón.</p>
+                <div className="lp-form-grid">
+                  <label>Tu nombre *<input required value={form.nombre} onChange={set('nombre')} /></label>
+                  <label>Salón o barbería *<input required value={form.salon} onChange={set('salon')} /></label>
+                  <label>WhatsApp *<input required type="tel" value={form.telefono} onChange={set('telefono')} placeholder="11 2345 6789" /></label>
+                  <label>Email<input type="email" value={form.email} onChange={set('email')} /></label>
+                  <label className="lp-span2">¿Cuántos profesionales son?
+                    <select value={form.profesionales} onChange={set('profesionales')}>
+                      <option value="">Elegí una opción</option>
+                      <option>1 a 3</option>
+                      <option>4 a 8</option>
+                      <option>9 a 15</option>
+                      <option>Más de 15 o varias sucursales</option>
+                    </select>
+                  </label>
+                  <label className="lp-span2">¿Algo que quieras resolver primero?<textarea rows="3" value={form.mensaje} onChange={set('mensaje')} placeholder="Ej: la caja, las comisiones, los turnos…" /></label>
+                </div>
+                <button className="lp-btn lp-btn-primary lp-btn-block" disabled={sending}>
+                  {sending ? 'Enviando…' : 'Enviar'} <ArrowRight size={16} />
+                </button>
+              </form>
+            ) : (
+              <div className="lp-sent">
+                <div className="lp-sent-icon"><Check size={28} /></div>
+                <h3>¡Gracias, {form.nombre.split(' ')[0] || 'listo'}!</h3>
+                <p>Recibimos tus datos y te escribimos a la brevedad para coordinar la demo.</p>
+                <button className="lp-btn lp-btn-dark" onClick={() => setContactOpen(false)}>Cerrar</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
