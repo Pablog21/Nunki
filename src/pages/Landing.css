@@ -18,7 +18,7 @@
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   line-height: 1.55;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
   text-align: left;
 }
 .lp *, .lp *::before, .lp *::after { box-sizing: border-box; }
@@ -40,7 +40,7 @@
 .lp-link { background: none; border: 0; color: var(--lp-ink-2); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
 /* Nav */
-.lp-nav { position: sticky; top: 0; z-index: 30; background: rgba(251, 250, 247, .82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(23,21,31,.06); }
+.lp-nav { position: sticky; top: 0; z-index: 30; background: rgba(251, 250, 247, .95); box-shadow: 0 6px 20px -16px rgba(11,31,26,.5); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(23,21,31,.06); }
 .lp-nav-in { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 16px; }
 .lp-brand { display: inline-flex; align-items: center; gap: 10px; font: 800 20px var(--lp-display); letter-spacing: -0.02em; }
 .lp-brand img { width: 34px; height: 34px; border-radius: 9px; object-fit: cover; }
@@ -301,3 +301,4 @@
   .lp-phones .lp-phone { width: 46%; }
   .lp-phone-up { margin-top: 32px; }
 }
+html:has(.lp) { scroll-padding-top: 80px; }
