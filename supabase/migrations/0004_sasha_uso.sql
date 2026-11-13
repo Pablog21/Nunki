@@ -26,9 +26,12 @@ language sql immutable as $$
   select case lower(coalesce(p_plan, 'esencial')) when 'premium' then 1500 else 300 end
 $$;
 
--- Paquete extra: cuántas consultas suma y cuánto se agrega a la próxima factura (ARS)
-create or replace function nunki.ia_paquete() returns jsonb
-language sql immutable as $$ select jsonb_build_object('consultas', 200, 'precio_ars', 4900, 'max_por_mes', 5) $$;
+-- Paquete extra: cuántas consultas suma y cuánto se agrega a la próxima factura, según la moneda del salón
+create or replace function nunki.ia_paquete(p_moneda text default 'ARS') returns jsonb
+language sql immutable as $$
+  select jsonb_build_object('consultas', 200, 'moneda', case when p_moneda = 'USD' then 'USD' else 'ARS' end,
+    'precio', case when p_moneda = 'USD' then 3 else 4900 end, 'max_por_mes', 5)
+$$;
 
 -- Tope diario por usuario (protege contra abuso o un error que repita consultas)
 create or replace function nunki.ia_limite_diario_usuario() returns integer
@@ -60,7 +63,8 @@ create table if not exists nunki.ia_extras (
   empresa_id uuid not null references nunki.empresas(id) on delete cascade,
   periodo text not null default nunki.ia_periodo(),
   consultas integer not null,
-  precio_ars integer not null,
+  precio numeric(12, 2) not null,
+  moneda text not null default 'ARS',
   solicitado_por uuid,
   solicitado_nombre text,
   created_at timestamptz not null default now(),
@@ -81,6 +85,7 @@ create policy ia_extras_super on nunki.ia_extras for update to authenticated usi
 revoke all on nunki.ia_uso, nunki.ia_extras from anon;
 grant select on nunki.ia_uso, nunki.ia_extras to authenticated;
 grant update (facturado, facturado_at) on nunki.ia_extras to authenticated;
+grant all on nunki.ia_uso, nunki.ia_extras to service_role;
 
 -- --------------------------------------------------------------------
 -- 3. Estado del cupo del salón en el mes
@@ -88,13 +93,13 @@ grant update (facturado, facturado_at) on nunki.ia_extras to authenticated;
 create or replace function nunki.ia_estado(p_empresa uuid) returns jsonb
 language plpgsql stable security definer set search_path = nunki, public as $$
 declare
-  v_plan text; v_override integer; v_base integer; v_extras integer; v_usados integer;
+  v_plan text; v_moneda text; v_override integer; v_base integer; v_extras integer; v_usados integer;
   v_periodo text := nunki.ia_periodo(); v_paquetes integer; v_limite integer;
 begin
   if not (coalesce(auth.role(), '') = 'service_role' or nunki.puede_ver(p_empresa)) then
     raise exception 'Sin permiso';
   end if;
-  select plan, ia_limite_mensual into v_plan, v_override from nunki.empresas where id = p_empresa;
+  select plan, moneda, ia_limite_mensual into v_plan, v_moneda, v_override from nunki.empresas where id = p_empresa;
   v_base := coalesce(v_override, nunki.ia_limite_plan(v_plan));
   select coalesce(sum(consultas), 0), count(*) into v_extras, v_paquetes from nunki.ia_extras where empresa_id = p_empresa and periodo = v_periodo;
   select count(*) into v_usados from nunki.ia_uso where empresa_id = p_empresa and periodo = v_periodo;
@@ -110,7 +115,7 @@ begin
     'porcentaje', case when v_limite > 0 then round(100.0 * v_usados / v_limite) else 100 end,
     'bloqueado', v_usados >= v_limite,
     'paquetes_mes', v_paquetes,
-    'paquete', nunki.ia_paquete()
+    'paquete', nunki.ia_paquete(v_moneda)
   );
 end $$;
 
@@ -119,11 +124,12 @@ end $$;
 -- --------------------------------------------------------------------
 create or replace function nunki.ia_comprar_extra(p_empresa uuid) returns jsonb
 language plpgsql volatile security definer set search_path = nunki, public as $$
-declare v_paq jsonb := nunki.ia_paquete(); v_cant integer; v_nombre text;
+declare v_paq jsonb; v_cant integer; v_nombre text;
 begin
   if not nunki.puede_administrar(p_empresa) then
     raise exception 'Solo el administrador del salón puede sumar consultas';
   end if;
+  select nunki.ia_paquete(moneda) into v_paq from nunki.empresas where id = p_empresa;
   -- Un pedido a la vez por salón
   perform pg_advisory_xact_lock(hashtext('ia_extra:' || p_empresa::text));
   select count(*) into v_cant from nunki.ia_extras where empresa_id = p_empresa and periodo = nunki.ia_periodo();
@@ -131,14 +137,14 @@ begin
     raise exception 'Llegaste al máximo de paquetes extra de este mes. Escribinos y lo resolvemos.';
   end if;
   select nombre_completo into v_nombre from nunki.usuarios where id = auth.uid();
-  insert into nunki.ia_extras (empresa_id, consultas, precio_ars, solicitado_por, solicitado_nombre)
-  values (p_empresa, (v_paq->>'consultas')::int, (v_paq->>'precio_ars')::int, auth.uid(), v_nombre);
+  insert into nunki.ia_extras (empresa_id, consultas, precio, moneda, solicitado_por, solicitado_nombre)
+  values (p_empresa, (v_paq->>'consultas')::int, (v_paq->>'precio')::numeric, v_paq->>'moneda', auth.uid(), v_nombre);
   return nunki.ia_estado(p_empresa);
 end $$;
 
 revoke all on function nunki.ia_estado(uuid), nunki.ia_comprar_extra(uuid) from public, anon;
 grant execute on function nunki.ia_estado(uuid), nunki.ia_comprar_extra(uuid) to authenticated, service_role;
-grant execute on function nunki.ia_periodo(timestamptz), nunki.ia_paquete(), nunki.ia_limite_plan(text), nunki.ia_limite_diario_usuario() to authenticated, service_role;
+grant execute on function nunki.ia_periodo(timestamptz), nunki.ia_paquete(text), nunki.ia_limite_plan(text), nunki.ia_limite_diario_usuario() to authenticated, service_role;
 
 -- --------------------------------------------------------------------
 -- 5. Resumen de salones para el panel, ahora con uso de Sasha y extras a facturar
@@ -146,9 +152,9 @@ grant execute on function nunki.ia_periodo(timestamptz), nunki.ia_paquete(), nun
 drop function if exists nunki.super_resumen_salones();
 create function nunki.super_resumen_salones()
 returns table (
-  id uuid, nombre text, slug text, plan text, estado_cuenta text, prueba_hasta date,
+  id uuid, nombre text, slug text, plan text, estado_cuenta text, moneda text, prueba_hasta date,
   alta_at timestamptz, usuarios bigint, admins text, turnos_30d bigint,
-  ia_limite_mensual integer, ia_usados bigint, ia_limite bigint, ia_costo_usd numeric, extras_a_facturar bigint
+  ia_limite_mensual integer, ia_usados bigint, ia_limite bigint, ia_costo_usd numeric, extras_a_facturar numeric
 )
 language plpgsql stable security definer set search_path = nunki, public as $$
 declare v_periodo text := nunki.ia_periodo();
@@ -157,7 +163,7 @@ begin
     raise exception 'Solo superadministradores';
   end if;
   return query
-  select e.id, e.nombre::text, e.slug, e.plan, e.estado_cuenta, e.prueba_hasta, e.alta_at,
+  select e.id, e.nombre::text, e.slug, e.plan, e.estado_cuenta, e.moneda, e.prueba_hasta, e.alta_at,
     (select count(*) from nunki.usuarios u where u.empresa_id = e.id),
     (select string_agg(coalesce(u.nombre_completo, u.email) || ' <' || coalesce(u.email,'') || '>', ', ')
        from nunki.usuarios u where u.empresa_id = e.id and lower(coalesce(u.rol,'')) in ('administrador','admin')),
@@ -167,7 +173,7 @@ begin
     (coalesce(e.ia_limite_mensual, nunki.ia_limite_plan(e.plan))
       + coalesce((select sum(x.consultas) from nunki.ia_extras x where x.empresa_id = e.id and x.periodo = v_periodo), 0))::bigint,
     (select coalesce(sum(x.costo_usd), 0) from nunki.ia_uso x where x.empresa_id = e.id and x.periodo = v_periodo),
-    (select coalesce(sum(x.precio_ars), 0) from nunki.ia_extras x where x.empresa_id = e.id and not x.facturado)::bigint
+    (select coalesce(sum(x.precio), 0) from nunki.ia_extras x where x.empresa_id = e.id and not x.facturado)
   from nunki.empresas e
   order by e.alta_at desc nulls last, e.nombre;
 end $$;
@@ -197,8 +203,15 @@ begin
   new.plan := old.plan;
   new.estado_cuenta := old.estado_cuenta;
   new.prueba_hasta := old.prueba_hasta;
+  new.moneda := old.moneda;
   new.notas_comerciales := old.notas_comerciales;
   new.alta_at := old.alta_at;
   new.ia_limite_mensual := old.ia_limite_mensual;
   return new;
 end $$;
+
+-- Funciones de parámetros sin search_path mutable
+alter function nunki.ia_limite_plan(text) set search_path = '';
+alter function nunki.ia_paquete(text) set search_path = '';
+alter function nunki.ia_limite_diario_usuario() set search_path = '';
+alter function nunki.ia_periodo(timestamptz) set search_path = '';

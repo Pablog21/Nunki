@@ -1,13 +1,14 @@
-// Planes comerciales de Nunki. Esencial en pesos argentinos; Premium en dólares
-// (se factura en pesos al tipo de cambio oficial del día). Precios finales, IVA incluido.
-// Se usan en la landing y en el panel de superadministrador.
+// Planes comerciales de Nunki.
+// Visitantes de Argentina ven y pagan en pesos (precio final, IVA incluido);
+// el resto del mundo, en dólares. Referencia: dólar oficial BNA ≈ $1.570 (nov 2026).
+// Se usan en la landing, en el panel de superadministrador y en el alta de salones.
 
 export const PLANES = [
   {
     id: 'esencial',
     nombre: 'Esencial',
-    precio: 25900,
-    moneda: 'ARS',
+    precios: { ARS: 25900, USD: 17 },
+    extraProfesional: { ARS: 3900, USD: 3 },
     periodo: '/mes',
     sasha: 300,
     detalle: 'Todo el salón en un solo sistema. Hasta 5 profesionales.',
@@ -20,13 +21,11 @@ export const PLANES = [
       'Stock, compras y proveedores',
       'Sasha, asistente con IA por voz: 300 consultas por mes',
     ],
-    extra: 'Profesional adicional: $3.900/mes',
   },
   {
     id: 'premium',
     nombre: 'Premium',
-    precio: 50,
-    moneda: 'USD',
+    precios: { ARS: 78900, USD: 50 },
     periodo: '/mes',
     sasha: 1500,
     destacado: true,
@@ -47,18 +46,46 @@ export const PLANES = [
       'Sasha responde consultas y agenda turnos por WhatsApp',
       'Campañas para recuperar clientes que dejaron de venir',
     ],
-    extra: 'Mensajes adicionales de Meta: al costo',
+    extraTexto: 'Mensajes adicionales de Meta: al costo',
   },
 ]
 
+export const PAQUETE_SASHA = { consultas: 200, precios: { ARS: 4900, USD: 3 } }
+
 export const planPorId = (id) => PLANES.find((p) => p.id === id) || PLANES[0]
 
-export const PAQUETE_SASHA = { consultas: 200, precio_ars: 4900 }
+export const MONEDAS = ['ARS', 'USD']
 
-export const formatoPrecio = (p) => (p.moneda === 'USD' ? `USD ${p.precio}` : formatoPesos(p.precio))
+// Argentina → pesos; cualquier otro país → dólares.
+// Se puede forzar con ?moneda=USD o ?moneda=ARS en la dirección (útil para probar).
+export function detectarMoneda() {
+  try {
+    const forzada = new URLSearchParams(window.location.search).get('moneda')?.toUpperCase()
+    if (MONEDAS.includes(forzada)) return forzada
+  } catch { /* sin window */ }
+  try {
+    const zona = Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+    if (zona.startsWith('America/Argentina') || zona === 'America/Buenos_Aires') return 'ARS'
+    if (zona) return 'USD'
+  } catch { /* sin Intl */ }
+  const idiomas = (typeof navigator !== 'undefined' && (navigator.languages || [navigator.language])) || []
+  return idiomas.some((l) => /-AR$/i.test(l || '')) ? 'ARS' : 'USD'
+}
 
 export const formatoPesos = (n) => '$' + Number(n || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })
+export const formatoMonto = (n, moneda = 'ARS') =>
+  moneda === 'USD' ? `USD ${Number(n || 0).toLocaleString('es-AR', { maximumFractionDigits: 2 })}` : formatoPesos(n)
+
+export const precioPlan = (p, moneda = 'ARS') => p.precios[moneda] ?? p.precios.ARS
+export const formatoPrecio = (p, moneda = 'ARS') => formatoMonto(precioPlan(p, moneda), moneda)
+
+export const extraPlan = (p, moneda = 'ARS') =>
+  p.extraProfesional ? `Profesional adicional: ${formatoMonto(p.extraProfesional[moneda], moneda)}/mes` : p.extraTexto
+
+export const notaPrecios = (moneda = 'ARS') =>
+  moneda === 'USD'
+    ? 'Precios en dólares estadounidenses. Pueden aplicar impuestos de tu país.'
+    : 'Precios finales en pesos, IVA incluido.'
 
 export const PRUEBA_DIAS = 14
 export const DESCUENTO_ANUAL = '2 meses sin cargo pagando el año'
-export const NOTA_USD = 'El plan Premium se factura en pesos al tipo de cambio oficial del día.'

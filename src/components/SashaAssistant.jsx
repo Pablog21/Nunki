@@ -5,6 +5,7 @@ import { procesarMensajeSasha, fetchResumenComandas, SashaLimiteError, fetchUsoS
 import { useNavigate } from 'react-router-dom'
 import SashaFace from './SashaFace'
 import { esAdmin } from '../lib/roles'
+import { formatoMonto } from '../lib/planes'
 import { 
   Mic, MicOff, Send, X, Minimize2, 
   Volume2, VolumeX, Calendar, Check, Trash2, 
@@ -358,7 +359,7 @@ export default function SashaAssistant() {
           ? err.message
           : `Llegamos al límite de ${est.limite ?? ''} consultas de este mes, así que por ahora no puedo responder. ` +
             (puedeSumar
-              ? `Si querés, sumás ${paq.consultas} consultas más por $${Number(paq.precio_ars || 0).toLocaleString('es-AR')} en tu próxima factura y sigo al instante.`
+              ? `Si querés, sumás ${paq.consultas} consultas más por ${formatoMonto(paq.precio, paq.moneda)} en tu próxima factura y sigo al instante.`
               : 'Pedile al administrador del salón que sume más consultas.')
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
@@ -895,11 +896,11 @@ export default function SashaAssistant() {
                       {m.limite?.puedeSumar && (
                         <div className="sasha-limite">
                           {m.limite.status === 'ok' ? (
-                            <p className="sasha-limite-ok"><Check size={15} /> Listo: sumaste {m.limite.estado?.paquete?.consultas} consultas. Se agregan ${Number(m.limite.estado?.paquete?.precio_ars || 0).toLocaleString('es-AR')} a tu próxima factura.</p>
+                            <p className="sasha-limite-ok"><Check size={15} /> Listo: sumaste {m.limite.estado?.paquete?.consultas} consultas. Se agregan {formatoMonto(m.limite.estado?.paquete?.precio, m.limite.estado?.paquete?.moneda)} a tu próxima factura.</p>
                           ) : (
                             <>
                               <button type="button" className="sasha-limite-btn" disabled={m.limite.status === 'procesando'} onClick={() => sumarConsultas(m.id)}>
-                                {m.limite.status === 'procesando' ? 'Sumando…' : `Sumar ${m.limite.estado?.paquete?.consultas} consultas · $${Number(m.limite.estado?.paquete?.precio_ars || 0).toLocaleString('es-AR')}`}
+                                {m.limite.status === 'procesando' ? 'Sumando…' : `Sumar ${m.limite.estado?.paquete?.consultas} consultas · ${formatoMonto(m.limite.estado?.paquete?.precio, m.limite.estado?.paquete?.moneda)}`}
                               </button>
                               <small>Se cobra en tu próxima factura. Usaste {m.limite.estado?.usados} de {m.limite.estado?.limite} este mes.</small>
                               {m.limite.status === 'error' && <small className="sasha-limite-err">{m.limite.error}</small>}

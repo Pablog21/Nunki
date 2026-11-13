@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { esSuperAdmin } from '../lib/roles'
 import { linkWhatsApp } from '../lib/whatsapp'
-import { PLANES, planPorId, formatoPesos, formatoPrecio, PRUEBA_DIAS } from '../lib/planes'
+import { PLANES, planPorId, formatoMonto, formatoPrecio, precioPlan, PRUEBA_DIAS, MONEDAS } from '../lib/planes'
 import './SuperAdmin.css'
 
 const ESTADOS = [
@@ -20,6 +20,7 @@ const ESTADOS_CUENTA = [
   { id: 'activa', label: 'Activa' },
   { id: 'suspendida', label: 'Suspendida' },
   { id: 'baja', label: 'Baja' },
+  { id: 'interna', label: 'Interna / demo' },
 ]
 
 const fechaCorta = (f) => (f ? new Date(f).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : '—')
@@ -184,15 +185,20 @@ function Salones() {
 
   const totales = useMemo(() => {
     const activos = salones.filter((s) => s.estado_cuenta === 'activa')
+    const suma = (lista, fn) => {
+      const r = { ARS: 0, USD: 0 }
+      lista.forEach((s) => { const m = s.moneda === 'USD' ? 'USD' : 'ARS'; r[m] += Number(fn(s, m) || 0) })
+      return r
+    }
     return {
       activos: activos.length,
       prueba: salones.filter((s) => s.estado_cuenta === 'prueba').length,
-      ars: activos.filter((s) => planPorId(s.plan).moneda !== 'USD').reduce((acc, s) => acc + planPorId(s.plan).precio, 0),
-      usd: activos.filter((s) => planPorId(s.plan).moneda === 'USD').reduce((acc, s) => acc + planPorId(s.plan).precio, 0),
-      extras: salones.reduce((acc, s) => acc + Number(s.extras_a_facturar || 0), 0),
+      mensual: suma(activos, (s, m) => precioPlan(planPorId(s.plan), m)),
+      extras: suma(salones, (s) => s.extras_a_facturar),
       costoIa: salones.reduce((acc, s) => acc + Number(s.ia_costo_usd || 0), 0),
     }
   }, [salones])
+  const ambas = (r) => [r.ARS > 0 || r.USD === 0 ? formatoMonto(r.ARS, 'ARS') : null, r.USD > 0 ? formatoMonto(r.USD, 'USD') : null].filter(Boolean).join(' + ')
 
   const marcarFacturado = async (id) => {
     const { error: e } = await supabase.rpc('super_extras_facturados', { p_empresa: id })
@@ -210,8 +216,8 @@ function Salones() {
       <div className="sa-kpis">
         <div className="glass-panel"><small>Salones activos</small><strong>{totales.activos}</strong></div>
         <div className="glass-panel"><small>En prueba</small><strong>{totales.prueba}</strong></div>
-        <div className="glass-panel"><small>Facturación mensual estimada</small><strong>{formatoPesos(totales.ars)}{totales.usd > 0 && <> + USD {totales.usd}</>}</strong></div>
-        <div className="glass-panel"><small>Extras de Sasha a facturar</small><strong>{formatoPesos(totales.extras)}</strong><small>Costo de IA este mes: USD {totales.costoIa.toFixed(2)}</small></div>
+        <div className="glass-panel"><small>Facturación mensual estimada</small><strong>{ambas(totales.mensual)}</strong></div>
+        <div className="glass-panel"><small>Extras de Sasha a facturar</small><strong>{ambas(totales.extras)}</strong><small>Costo de IA este mes: USD {totales.costoIa.toFixed(2)}</small></div>
       </div>
 
       {error && <p className="sa-error">{error}</p>}
@@ -227,9 +233,14 @@ function Salones() {
               <tr key={s.id}>
                 <td><strong>{s.nombre}</strong>{s.slug && <div className="sa-muted">/r/{s.slug}</div>}</td>
                 <td>
-                  <select className="input-field sa-select" value={s.plan || 'esencial'} onChange={(e) => actualizar(s.id, { plan: e.target.value })} aria-label="Plan">
-                    {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                  </select>
+                  <div className="sa-cuenta">
+                    <select className="input-field sa-select" value={s.plan || 'esencial'} onChange={(e) => actualizar(s.id, { plan: e.target.value })} aria-label="Plan">
+                      {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    </select>
+                    <select className="input-field sa-select" value={s.moneda || 'ARS'} onChange={(e) => actualizar(s.id, { moneda: e.target.value })} aria-label="Moneda">
+                      {MONEDAS.map((m) => <option key={m} value={m}>{formatoPrecio(planPorId(s.plan), m)}/mes</option>)}
+                    </select>
+                  </div>
                 </td>
                 <td>
                   <div className="sa-cuenta">
@@ -280,7 +291,7 @@ function UsoSasha({ s, onLimite, onFacturado }) {
       )}
       {Number(s.extras_a_facturar) > 0 && (
         <button type="button" className="sa-link sa-extra" onClick={onFacturado} title="Marcar como facturado">
-          {formatoPesos(s.extras_a_facturar)} a facturar ✓
+          {formatoMonto(s.extras_a_facturar, s.moneda)} a facturar ✓
         </button>
       )}
     </div>
@@ -294,6 +305,7 @@ function AltaSalon({ inicial, onClose, onCreado }) {
     slug: '',
     whatsapp: c?.telefono || '',
     plan: c?.plan_interes || 'esencial',
+    moneda: 'ARS',
     dias_prueba: PRUEBA_DIAS,
     nombre_completo: c?.nombre || '',
     email: c?.email || '',
@@ -312,7 +324,7 @@ function AltaSalon({ inicial, onClose, onCreado }) {
     const { data, error: err } = await supabase.functions.invoke('nunki-super-alta-salon', {
       body: {
         contacto_id: c?.id || null,
-        salon: { nombre: form.salon, slug: form.slug, whatsapp: form.whatsapp, plan: form.plan, dias_prueba: Number(form.dias_prueba) },
+        salon: { nombre: form.salon, slug: form.slug, whatsapp: form.whatsapp, plan: form.plan, moneda: form.moneda, dias_prueba: Number(form.dias_prueba) },
         admin: { nombre_completo: form.nombre_completo, email: form.email, telefono: form.telefono },
       },
     })
@@ -355,7 +367,13 @@ function AltaSalon({ inicial, onClose, onCreado }) {
               <label>WhatsApp del salón<input className="input-field" type="tel" value={form.whatsapp} onChange={set('whatsapp')} /></label>
               <label>Plan
                 <select className="input-field" value={form.plan} onChange={set('plan')}>
-                  {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPrecio(p)}/mes</option>)}
+                  {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPrecio(p, form.moneda)}/mes</option>)}
+                </select>
+              </label>
+              <label>Moneda
+                <select className="input-field" value={form.moneda} onChange={set('moneda')}>
+                  <option value="ARS">Pesos (Argentina)</option>
+                  <option value="USD">Dólares (otros países)</option>
                 </select>
               </label>
               <label>Días de prueba gratis

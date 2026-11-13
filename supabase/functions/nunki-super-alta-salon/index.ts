@@ -12,7 +12,7 @@ const json = (body: unknown, status = 200) =>
 const PLANES = ['esencial', 'premium']
 const limpiar = (v: unknown, max = 160) => String(v ?? '').trim().slice(0, max)
 const slugify = (s: string) =>
-  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
 
 // Contraseña temporal legible: 3 bloques sin caracteres ambiguos
 function claveTemporal() {
@@ -52,6 +52,7 @@ Deno.serve(async (req: Request) => {
   const telefono = limpiar(body.admin?.telefono, 40)
   const whatsapp = limpiar(body.salon?.whatsapp, 40) || telefono
   const plan = PLANES.includes(body.salon?.plan) ? body.salon.plan : 'esencial'
+  const moneda = body.salon?.moneda === 'USD' ? 'USD' : 'ARS'
   const diasPrueba = Math.min(Math.max(Number(body.salon?.dias_prueba ?? 14) || 0, 0), 90)
   const contactoId = body.contacto_id ? limpiar(body.contacto_id, 40) : null
 
@@ -75,6 +76,7 @@ Deno.serve(async (req: Request) => {
     slug,
     whatsapp: whatsapp || null,
     plan,
+    moneda,
     estado_cuenta: diasPrueba > 0 ? 'prueba' : 'activa',
     prueba_hasta: pruebaHasta,
     reserva_online_activa: false,

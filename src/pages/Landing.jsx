@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabaseClient'
 import './Landing.css'
 import { NunkiSymbol } from '../components/NunkiLogo'
 import SashaFace from '../components/SashaFace'
-import { PLANES, formatoPrecio, formatoPesos, PRUEBA_DIAS, DESCUENTO_ANUAL, NOTA_USD, PAQUETE_SASHA } from '../lib/planes'
+import { PLANES, formatoPrecio, formatoMonto, PRUEBA_DIAS, DESCUENTO_ANUAL, PAQUETE_SASHA, detectarMoneda, extraPlan, notaPrecios } from '../lib/planes'
 
 /* ====================================================================
    CONFIGURACIÓN COMERCIAL — cambiar aquí marca, contacto y precios.
@@ -110,7 +110,7 @@ const FAQS = [
   { q: '¿Mis empleados ven la caja y las ganancias?', a: 'No, salvo que vos lo decidas. Hay perfiles de administrador y de operador: el equipo carga turnos y comandas; los números del negocio los ve el dueño.' },
   { q: '¿Mis datos están separados de otros salones?', a: 'Sí. Cada salón tiene su propio espacio, su logo y sus usuarios, y solo accede a su información.' },
   { q: '¿Qué es ' + BRAND.asistente + '?', a: 'Es la asistente con inteligencia artificial del sistema. Le hablás o le escribís y agenda turnos, arma comandas y responde consultas sobre clientes y facturación. Siempre te pide confirmación antes de guardar.' },
-  { q: '¿Cuánto cuesta?', a: `El plan Esencial cuesta ${formatoPrecio(PLANES[0])} por mes y el Premium ${formatoPrecio(PLANES[1])}. Los dos tienen ${PRUEBA_DIAS} días de prueba gratis. Si tenés varias sucursales, escribinos.` },
+  { q: '¿Cuánto cuesta?', a: (m) => `El plan Esencial cuesta ${formatoPrecio(PLANES[0], m)} por mes y el Premium ${formatoPrecio(PLANES[1], m)}. Los dos tienen ${PRUEBA_DIAS} días de prueba gratis. Si tenés varias sucursales, escribinos.` },
 ]
 
 function waLink(texto) {
@@ -125,6 +125,7 @@ export default function Landing() {
   const [chatUsed, setChatUsed] = useState([])
   const [showSticky, setShowSticky] = useState(false)
   const [chatLog, setChatLog] = useState([])
+  const [moneda] = useState(detectarMoneda)
   const [typing, setTyping] = useState(false)
   const [hablando, setHablando] = useState(false)
   const [openFaq, setOpenFaq] = useState(0)
@@ -490,21 +491,21 @@ export default function Landing() {
               <div key={p.id} className={`lp-plan ${p.destacado ? 'is-featured' : ''}`}>
                 {p.destacado && <span className="lp-plan-badge">WhatsApp automático</span>}
                 <h3>{p.nombre}</h3>
-                <div className="lp-plan-price">{formatoPrecio(p)}<small>{p.periodo}</small></div>
+                <div className="lp-plan-price">{formatoPrecio(p, moneda)}<small>{p.periodo}</small></div>
                 <p className="lp-plan-detalle">{p.detalle}</p>
                 <ul>
                   {p.items.map((it) => (
                     <li key={it}><Check size={15} /> <span>{it}{p.pronto?.includes(it) && <em className="lp-pronto">Pronto</em>}</span></li>
                   ))}
                 </ul>
-                {p.extra && <small className="lp-note">{p.extra}</small>}
+                {extraPlan(p, moneda) && <small className="lp-note">{extraPlan(p, moneda)}</small>}
                 <button className={`lp-btn ${p.destacado ? 'lp-btn-primary' : 'lp-btn-dark'}`} onClick={() => elegirPlan(p.id)}>
                   Quiero el plan {p.nombre}
                 </button>
               </div>
             ))}
           </div>
-          <p className="lp-note lp-plan-pie">Precios finales, IVA incluido. {NOTA_USD} {DESCUENTO_ANUAL}. ¿Necesitás más consultas a {BRAND.asistente}? Sumás {PAQUETE_SASHA.consultas} por {formatoPesos(PAQUETE_SASHA.precio_ars)} cuando quieras.</p>
+          <p className="lp-note lp-plan-pie">{notaPrecios(moneda)} {DESCUENTO_ANUAL}. ¿Necesitás más consultas a {BRAND.asistente}? Sumás {PAQUETE_SASHA.consultas} por {formatoMonto(PAQUETE_SASHA.precios[moneda], moneda)} cuando quieras.</p>
         </div>
       </section>
 
@@ -534,7 +535,7 @@ export default function Landing() {
                 <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)}>
                   {f.q} <ChevronDown size={18} />
                 </button>
-                {openFaq === i && <p>{f.a}</p>}
+                {openFaq === i && <p>{typeof f.a === 'function' ? f.a(moneda) : f.a}</p>}
               </div>
             ))}
           </div>
@@ -595,7 +596,7 @@ export default function Landing() {
                   <label>Plan que te interesa
                     <select value={form.plan} onChange={set('plan')}>
                       <option value="">Todavía no sé</option>
-                      {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPrecio(p)}/mes</option>)}
+                      {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPrecio(p, moneda)}/mes</option>)}
                     </select>
                   </label>
                   <label className="lp-span2">¿Algo que quieras resolver primero?<textarea rows="3" value={form.mensaje} onChange={set('mensaje')} placeholder="Ej: la caja, las comisiones, los turnos…" /></label>

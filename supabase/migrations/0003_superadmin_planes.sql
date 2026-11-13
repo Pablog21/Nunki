@@ -41,6 +41,7 @@ alter table nunki.empresas
   add column if not exists plan text not null default 'esencial',
   add column if not exists estado_cuenta text not null default 'prueba',
   add column if not exists prueba_hasta date,
+  add column if not exists moneda text not null default 'ARS',
   add column if not exists notas_comerciales text,
   add column if not exists alta_at timestamptz default now();
 
@@ -48,7 +49,10 @@ do $$ begin
   alter table nunki.empresas add constraint empresas_plan_chk check (plan in ('esencial','premium'));
 exception when duplicate_object then null; end $$;
 do $$ begin
-  alter table nunki.empresas add constraint empresas_estado_cuenta_chk check (estado_cuenta in ('prueba','activa','suspendida','baja'));
+  alter table nunki.empresas add constraint empresas_estado_cuenta_chk check (estado_cuenta in ('prueba','activa','suspendida','baja','interna'));
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter table nunki.empresas add constraint empresas_moneda_chk check (moneda in ('ARS','USD'));
 exception when duplicate_object then null; end $$;
 
 -- Los administradores del salón editan su empresa, pero no pueden cambiarse el plan ni el estado
@@ -61,6 +65,7 @@ begin
   new.plan := old.plan;
   new.estado_cuenta := old.estado_cuenta;
   new.prueba_hasta := old.prueba_hasta;
+  new.moneda := old.moneda;
   new.notas_comerciales := old.notas_comerciales;
   new.alta_at := old.alta_at;
   return new;

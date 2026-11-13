@@ -1,6 +1,6 @@
-// Nunki · Sasha: proxy seguro a Gemini.
+// Nunki · Sasha: proxy seguro a Gemini, con tope de uso por salón.
 // Solo usuarios logueados de Nunki con un salón asignado pueden usarlo.
-// Secretos necesarios: GEMINI_API_KEY (y opcional GEMINI_MODEL, NUNKI_ALLOWED_ORIGIN).
+// Secretos: GEMINI_API_KEY (opcionales GEMINI_MODEL, GEMINI_USD_ENTRADA_M, GEMINI_USD_SALIDA_M, NUNKI_ALLOWED_ORIGIN).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
