@@ -20,7 +20,7 @@ declare
   t text;
   tablas text[] := array[
     'empresas','usuarios','clientes','servicios','articulos','servicio_insumos',
-    'ordenes_trabajo','ordenes_trabajo_detalles','turnos','comisiones','liquidaciones',
+    'ordenes_trabajo','ordenes_trabajo_detalles','ordenes_trabajo_ayudantes','turnos','comisiones','liquidaciones',
     'cajas_cierres','cajas_movimientos','asistencias','movimientos_stock',
     'compras_proveedores','compras_detalles','contactos_landing'];
 begin
@@ -72,6 +72,17 @@ begin
   end loop;
 end $$;
 
+-- Contactos de la landing (no existe en h.A.I.r)
+create table if not exists nunki.contactos_landing (
+  id uuid primary key default gen_random_uuid(),
+  nombre text,
+  salon text,
+  telefono text,
+  email text,
+  mensaje text,
+  created_at timestamptz not null default now()
+);
+
 -- --------------------------------------------------------------------
 -- 3. Columnas nuevas de Nunki
 -- --------------------------------------------------------------------
@@ -86,6 +97,13 @@ alter table nunki.empresas
   add column if not exists recordatorio_plantilla text;
 
 create unique index if not exists empresas_slug_key on nunki.empresas (lower(slug));
+
+alter table nunki.cajas_cierres
+  add column if not exists controlada boolean not null default false,
+  add column if not exists controlada_fecha timestamptz,
+  add column if not exists controlada_por_id uuid references nunki.usuarios(id) on delete set null,
+  add column if not exists controlada_por_nombre text,
+  add column if not exists controlada_comentario text;
 
 alter table nunki.servicios
   add column if not exists reservable_online boolean not null default true;
@@ -208,6 +226,11 @@ create policy detalle_orden on nunki.ordenes_trabajo_detalles for all to authent
   using (exists (select 1 from nunki.ordenes_trabajo o where o.id = orden_trabajo_id and nunki.puede_ver(o.empresa_id)))
   with check (exists (select 1 from nunki.ordenes_trabajo o where o.id = orden_trabajo_id and nunki.puede_ver(o.empresa_id)));
 
+drop policy if exists detalle_ayudantes on nunki.ordenes_trabajo_ayudantes;
+create policy detalle_ayudantes on nunki.ordenes_trabajo_ayudantes for all to authenticated
+  using (exists (select 1 from nunki.ordenes_trabajo o where o.id = orden_trabajo_id and nunki.puede_ver(o.empresa_id)))
+  with check (exists (select 1 from nunki.ordenes_trabajo o where o.id = orden_trabajo_id and nunki.puede_ver(o.empresa_id)));
+
 drop policy if exists detalle_compra on nunki.compras_detalles;
 create policy detalle_compra on nunki.compras_detalles for all to authenticated
   using (exists (select 1 from nunki.compras_proveedores c where c.id = compra_id and nunki.puede_ver(c.empresa_id)))
@@ -275,3 +298,34 @@ drop policy if exists contactos_insertar on nunki.contactos_landing;
 drop policy if exists contactos_leer on nunki.contactos_landing;
 create policy contactos_insertar on nunki.contactos_landing for insert to anon, authenticated with check (true);
 create policy contactos_leer on nunki.contactos_landing for select to authenticated using (nunki.es_super());
+
+-- --------------------------------------------------------------------
+-- 7. Triggers heredados de h.A.I.r
+-- --------------------------------------------------------------------
+-- Cada movimiento de stock actualiza el stock del artículo
+create or replace function nunki.actualizar_stock_articulo() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  update nunki.articulos set stock_actual = stock_actual + new.cantidad where id = new.articulo_id;
+  return new;
+end $$;
+
+drop trigger if exists trg_actualizar_stock on nunki.movimientos_stock;
+create trigger trg_actualizar_stock after insert on nunki.movimientos_stock
+  for each row execute function nunki.actualizar_stock_articulo();
+
+-- Al completar una comanda, su turno pasa a "Realizado"
+create or replace function nunki.orden_completada_turno() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.estado = 'completada' and new.turno_id is not null then
+    update nunki.turnos set estado = 'Realizado' where id = new.turno_id and estado <> 'Realizado';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists tr_orden_completada_turno on nunki.ordenes_trabajo;
+create trigger tr_orden_completada_turno after insert or update on nunki.ordenes_trabajo
+  for each row execute function nunki.orden_completada_turno();
+
+revoke execute on function nunki.actualizar_stock_articulo(), nunki.orden_completada_turno() from anon, authenticated;
