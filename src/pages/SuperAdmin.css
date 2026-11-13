@@ -73,3 +73,5 @@
 .sa-extra { color: #6FC79E; font-weight: 700; }
 .sa-kpis > div small + strong + small { font-size: 0.75rem; }
 .sa-tabla table { min-width: 1040px; }
+.sa-selector { padding: 1rem 1.25rem; margin-bottom: 1rem; display: grid; gap: 6px; max-width: 600px; }
+.sa-selector label { display: grid; gap: 6px; font-weight: 600; }

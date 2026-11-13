@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
-import { Inbox, Store, Plus, MessageCircle, Copy, CheckCircle2, X, RefreshCw, LogIn, Mail } from 'lucide-react'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Inbox, Store, Settings, Plus, MessageCircle, Copy, CheckCircle2, X, RefreshCw, LogIn, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { esSuperAdmin } from '../lib/roles'
 import { linkWhatsApp } from '../lib/whatsapp'
 import { PLANES, planPorId, formatoMonto, formatoPrecio, precioPlan, PRUEBA_DIAS, MONEDAS } from '../lib/planes'
+import Configuracion from './Configuracion'
 import './SuperAdmin.css'
 
 const ESTADOS = [
@@ -36,7 +37,9 @@ const haceCuanto = (f) => {
 
 export default function SuperAdmin() {
   const { userProfile } = useAuth()
-  const [tab, setTab] = useState('solicitudes')
+  const [params, setParams] = useSearchParams()
+  const tab = ['solicitudes', 'salones', 'config'].includes(params.get('tab')) ? params.get('tab') : 'solicitudes'
+  const setTab = (t) => setParams(t === 'solicitudes' ? {} : { tab: t }, { replace: true })
   const [alta, setAlta] = useState(null) // datos para precargar el alta
 
   if (userProfile && !esSuperAdmin(userProfile)) return <Navigate to="/" replace />
@@ -58,10 +61,14 @@ export default function SuperAdmin() {
         <button className={`btn ${tab === 'salones' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setTab('salones')}>
           <Store size={16} /> Salones
         </button>
+        <button className={`btn ${tab === 'config' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setTab('config')}>
+          <Settings size={16} /> Configuración del salón
+        </button>
       </div>
 
       {tab === 'solicitudes' && <Solicitudes onCrearSalon={setAlta} />}
       {tab === 'salones' && <Salones />}
+      {tab === 'config' && <ConfigSalon />}
 
       {alta && <AltaSalon inicial={alta} onClose={() => setAlta(null)} onCreado={() => setTab('salones')} />}
     </div>
@@ -211,6 +218,11 @@ function Salones() {
     navigate('/agenda')
   }
 
+  const configurar = (id) => {
+    changeActiveEmpresaId(id)
+    navigate('/panel?tab=config')
+  }
+
   return (
     <section>
       <div className="sa-kpis">
@@ -258,7 +270,12 @@ function Salones() {
                 <td className="sa-admins">{s.admins || <span className="sa-muted">Sin administrador</span>}</td>
                 <td>{s.turnos_30d}</td>
                 <td>{fechaCorta(s.alta_at)}</td>
-                <td><button className="btn btn-secondary sa-entrar" onClick={() => entrar(s.id)}><LogIn size={15} /> Entrar</button></td>
+                <td>
+                  <div className="sa-cuenta">
+                    <button className="btn btn-secondary sa-entrar" onClick={() => entrar(s.id)}><LogIn size={15} /> Entrar</button>
+                    <button type="button" className="sa-link" onClick={() => configurar(s.id)}>Configurar</button>
+                  </div>
+                </td>
               </tr>
             ))}
             {!loading && salones.length === 0 && <tr><td colSpan="8" className="sa-muted">Todavía no hay salones.</td></tr>}
@@ -266,6 +283,28 @@ function Salones() {
         </table>
       </div>
       <p className="sa-muted sa-nota">"Entrar" te cambia al salón para ver su sistema como lo ve el administrador. Para cambiar la contraseña de alguien, entrá al salón y usá Colaboradores.</p>
+    </section>
+  )
+}
+
+function ConfigSalon() {
+  const { activeEmpresaId, changeActiveEmpresaId } = useAuth()
+  const [salones, setSalones] = useState([])
+  useEffect(() => {
+    supabase.from('empresas').select('id, nombre').order('nombre').then(({ data }) => setSalones(data || []))
+  }, [])
+  return (
+    <section>
+      <div className="glass-panel sa-selector">
+        <label>Salón a configurar
+          <select className="input-field" value={activeEmpresaId || ''} onChange={(e) => changeActiveEmpresaId(e.target.value)}>
+            <option value="">Elegí un salón…</option>
+            {salones.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+          </select>
+        </label>
+        <p className="sa-muted">Lo que elijas acá también cambia el salón que ves en Agenda, Comandas y el resto del sistema.</p>
+      </div>
+      {activeEmpresaId ? <Configuracion key={activeEmpresaId} embebido /> : <p className="sa-muted">Elegí un salón para ver su configuración.</p>}
     </section>
   )
 }

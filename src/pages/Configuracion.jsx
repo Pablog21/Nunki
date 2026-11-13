@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
+import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { Upload, Save, Palette, Building, DollarSign } from 'lucide-react'
 import { updateAppBranding } from '../lib/pwaBranding'
 
-export default function Configuracion() {
+export default function Configuracion({ embebido = false }) {
   const { userProfile, activeEmpresaId, changeActiveEmpresaId } = useAuth()
   const [empresa, setEmpresa] = useState(null)
   const [allCompanies, setAllCompanies] = useState([])
@@ -179,11 +180,16 @@ export default function Configuracion() {
     }
   }
 
+  // El superadmin configura los salones desde el Panel Nunki
+  if (!embebido && userProfile?.rol === 'super_admin') return <Navigate to="/panel?tab=config" replace />
+
   return (
     <div className="animate-fade-in">
-      <header className="page-header">
-        <h1 className="page-title">Configuración de Empresa</h1>
-      </header>
+      {!embebido && (
+        <header className="page-header">
+          <h1 className="page-title">Configuración de Empresa</h1>
+        </header>
+      )}
 
       {isOperator ? (
         <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', maxWidth: '600px', margin: '2rem auto' }}>
@@ -195,7 +201,7 @@ export default function Configuracion() {
       ) : (
         <div style={{ maxWidth: '600px' }}>
           {/* Selector de Salón para Super Admin */}
-          {userProfile?.rol === 'super_admin' && (
+          {userProfile?.rol === 'super_admin' && !embebido && (
             <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid var(--primary-color)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}>
                 <Building size={18} style={{ color: 'var(--primary-color)' }} />

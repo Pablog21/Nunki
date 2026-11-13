@@ -321,7 +321,7 @@ export default function Layout() {
                 Colaboradores
               </NavLink>
             )}
-            {!isOperator && (
+            {!isOperator && userProfile?.rol !== 'super_admin' && (
               <NavLink to="/configuracion" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                 <Settings size={20} />
                 Configuración
