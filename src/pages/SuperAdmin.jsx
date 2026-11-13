@@ -5,8 +5,10 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { esSuperAdmin } from '../lib/roles'
 import { linkWhatsApp } from '../lib/whatsapp'
+import { fechaCorta as fechaPago } from '../lib/facturacion'
 import { PLANES, planPorId, formatoMonto, formatoPrecio, precioPlan, PRUEBA_DIAS, MONEDAS } from '../lib/planes'
 import Configuracion from './Configuracion'
+import '../components/Pagos.css'
 import './SuperAdmin.css'
 
 const ESTADOS = [
@@ -173,6 +175,7 @@ function Salones() {
   const [salones, setSalones] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [pagoDe, setPagoDe] = useState(null)
 
   const cargar = async () => {
     setLoading(true)
@@ -238,7 +241,7 @@ function Salones() {
       <div className="glass-panel table-container sa-tabla">
         <table className="data-table">
           <thead>
-            <tr><th>Salón</th><th>Plan</th><th>Cuenta</th><th>Sasha este mes</th><th>Administradores</th><th>Turnos 30 días</th><th>Alta</th><th /></tr>
+            <tr><th>Salón</th><th>Plan</th><th>Cuenta</th><th>Pago</th><th>Sasha este mes</th><th>Administradores</th><th>Turnos 30 días</th><th>Alta</th><th /></tr>
           </thead>
           <tbody>
             {salones.map((s) => (
@@ -266,6 +269,7 @@ function Salones() {
                     )}
                   </div>
                 </td>
+                <td><EstadoPagoCelda s={s} onRegistrar={() => setPagoDe(s)} /></td>
                 <td><UsoSasha s={s} onLimite={(v) => actualizar(s.id, { ia_limite_mensual: v })} onFacturado={() => marcarFacturado(s.id)} /></td>
                 <td className="sa-admins">{s.admins || <span className="sa-muted">Sin administrador</span>}</td>
                 <td>{s.turnos_30d}</td>
@@ -278,12 +282,75 @@ function Salones() {
                 </td>
               </tr>
             ))}
-            {!loading && salones.length === 0 && <tr><td colSpan="8" className="sa-muted">Todavía no hay salones.</td></tr>}
+            {!loading && salones.length === 0 && <tr><td colSpan="9" className="sa-muted">Todavía no hay salones.</td></tr>}
           </tbody>
         </table>
       </div>
+      {pagoDe && <RegistrarPago s={pagoDe} onClose={() => setPagoDe(null)} onListo={() => { setPagoDe(null); cargar() }} />}
       <p className="sa-muted sa-nota">"Entrar" te cambia al salón para ver su sistema como lo ve el administrador. Para cambiar la contraseña de alguien, entrá al salón y usá Colaboradores.</p>
     </section>
+  )
+}
+
+const ESTADO_PAGO = {
+  al_dia: 'Al día', por_vencer: 'Por vencer', prueba: 'En prueba', prueba_por_vencer: 'Prueba por terminar',
+  vencido: 'Vencido', bloqueado: 'Bloqueado', suspendida: 'Suspendida', interna: 'Interna',
+}
+
+function EstadoPagoCelda({ s, onRegistrar }) {
+  const p = s.pago || {}
+  const detalle = p.estado === 'vencido' ? `hace ${p.dias_vencido} d · bloquea ${fechaPago(p.bloqueo_el)}`
+    : p.estado === 'bloqueado' ? `desde ${fechaPago(p.bloqueo_el)}`
+      : p.estado === 'interna' ? '' : `${p.en_prueba ? 'prueba hasta' : 'hasta'} ${fechaPago(p.vencimiento)}`
+  return (
+    <div className="sa-uso">
+      <span className={`pg-chip pg-chip-${p.estado}`}>{ESTADO_PAGO[p.estado] ?? '—'}</span>
+      {detalle && <small className="sa-muted">{detalle}</small>}
+      {p.debito_automatico && <small className="sa-ok-txt">Débito automático</small>}
+      {p.estado !== 'interna' && <button type="button" className="sa-link" onClick={onRegistrar}>Registrar pago</button>}
+    </div>
+  )
+}
+
+function RegistrarPago({ s, onClose, onListo }) {
+  const moneda = s.moneda === 'USD' ? 'USD' : 'ARS'
+  const [form, setForm] = useState({ monto: s.pago?.precio ?? precioPlan(planPorId(s.plan), moneda), meses: 1, nota: '' })
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState('')
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const guardar = async (e) => {
+    e.preventDefault()
+    setEnviando(true)
+    const { error: err } = await supabase.rpc('super_registrar_pago', {
+      p_empresa: s.id, p_monto: Number(form.monto), p_moneda: moneda, p_meses: Number(form.meses), p_nota: form.nota || null,
+    })
+    setEnviando(false)
+    if (err) return setError(err.message)
+    onListo()
+  }
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content sa-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Registrar pago">
+        <div className="modal-header">
+          <h2>Registrar pago · {s.nombre}</h2>
+          <button className="sa-icon" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
+        </div>
+        <form className="modal-body sa-form" onSubmit={guardar}>
+          <fieldset>
+            <legend>Pago recibido por fuera de Mercado Pago (transferencia, efectivo, dólares)</legend>
+            <label>Monto ({moneda})<input className="input-field" type="number" min="0" step="0.01" required value={form.monto} onChange={set('monto')} /></label>
+            <label>Meses que cubre<input className="input-field" type="number" min="1" max="24" required value={form.meses} onChange={set('meses')} /></label>
+            <label className="sa-span2">Nota<input className="input-field" value={form.nota} onChange={set('nota')} placeholder="Ej: transferencia del 13/11" /></label>
+          </fieldset>
+          <p className="sa-muted">Hoy está {s.pago?.en_prueba ? 'en prueba' : 'pagado'} hasta el {fechaPago(s.pago?.vencimiento)}. Si está al día o en el período de gracia, los meses se suman desde esa fecha; si está bloqueado, desde hoy.</p>
+          {error && <p className="sa-error">{error}</p>}
+          <div className="sa-form-foot">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" disabled={enviando}>{enviando ? 'Guardando…' : 'Registrar pago'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 

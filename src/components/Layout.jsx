@@ -3,11 +3,13 @@ import { createPortal } from 'react-dom'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { Users, Scissors, Package, LayoutDashboard, LogOut, FileText, ShoppingCart, Settings, Building, UserCheck, Clock, Wallet, Calendar, Sparkles, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Menu, X, Bell, ShieldCheck } from 'lucide-react'
+import { Users, Scissors, Package, LayoutDashboard, LogOut, FileText, ShoppingCart, Settings, Building, UserCheck, Clock, Wallet, Calendar, Sparkles, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Menu, X, Bell, ShieldCheck, CreditCard } from 'lucide-react'
 import SashaAssistant from './SashaAssistant'
 import { updateAppBranding } from '../lib/pwaBranding'
 import { esOperador } from '../lib/roles'
 import { NunkiSymbol } from './NunkiLogo'
+import { BannerPago, BloqueoPago } from './AvisoPago'
+import { fetchMiEstadoPago } from '../lib/facturacion'
 
 export default function Layout() {
   const { signOut, user, userProfile, activeEmpresaId, changeActiveEmpresaId } = useAuth()
@@ -143,6 +145,22 @@ export default function Layout() {
 
   const rawRol = (userProfile?.rol || '').toLowerCase().trim()
   const isOperator = esOperador(userProfile)
+  const esSuper = rawRol === 'super_admin'
+
+  // Estado de la membresía del salón (el superadmin no tiene avisos ni bloqueo)
+  const [estadoPago, setEstadoPago] = useState(null)
+  useEffect(() => {
+    if (!userProfile || esSuper) { setEstadoPago(null); return }
+    let vivo = true
+    const cargar = () => fetchMiEstadoPago().then((ep) => { if (vivo) setEstadoPago(ep) })
+    cargar()
+    const t = setInterval(cargar, 10 * 60 * 1000)
+    return () => { vivo = false; clearInterval(t) }
+  }, [userProfile, esSuper, location.pathname === '/mi-plan'])
+
+  if (estadoPago?.bloqueado && !esSuper) {
+    return <BloqueoPago ep={estadoPago} esAdmin={!isOperator} email={user?.email || ''} onSalir={() => signOut()} />
+  }
 
   return (
     <div className="app-container">
@@ -321,6 +339,12 @@ export default function Layout() {
                 Colaboradores
               </NavLink>
             )}
+            {!isOperator && !esSuper && (
+              <NavLink to="/mi-plan" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                <CreditCard size={20} />
+                Mi plan
+              </NavLink>
+            )}
             {!isOperator && userProfile?.rol !== 'super_admin' && (
               <NavLink to="/configuracion" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                 <Settings size={20} />
@@ -385,6 +409,7 @@ export default function Layout() {
       </aside>
 
       <main className="main-content" ref={mainContentRef}>
+        {!esSuper && location.pathname !== '/mi-plan' && <BannerPago ep={estadoPago} esAdmin={!isOperator} />}
         <Outlet />
       </main>
 

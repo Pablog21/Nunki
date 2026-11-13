@@ -75,3 +75,6 @@
 .sa-tabla table { min-width: 1040px; }
 .sa-selector { padding: 1rem 1.25rem; margin-bottom: 1rem; display: grid; gap: 6px; max-width: 600px; }
 .sa-selector label { display: grid; gap: 6px; font-weight: 600; }
+.sa-ok-txt { color: #6FC79E; font-size: 0.78rem; }
+.sa-tabla table { min-width: 1180px; }
+.sa-uso .pg-chip { justify-self: start; }

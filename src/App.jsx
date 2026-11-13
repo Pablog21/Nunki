@@ -18,6 +18,7 @@ const Agenda = lazy(() => import('./pages/Agenda'))
 const Reservas = lazy(() => import('./pages/Reservas'))
 const Reserva = lazy(() => import('./pages/Reserva'))
 const SuperAdmin = lazy(() => import('./pages/SuperAdmin'))
+const MiPlan = lazy(() => import('./pages/MiPlan'))
 import './index.css'
 
 // Componente para proteger las rutas (solo usuarios logueados)
@@ -61,6 +62,7 @@ function AppContent() {
             <Route path="reservas" element={<Reservas />} />
             <Route path="configuracion" element={<Configuracion />} />
             <Route path="panel" element={<SuperAdmin />} />
+            <Route path="mi-plan" element={<MiPlan />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Route>
         )}
