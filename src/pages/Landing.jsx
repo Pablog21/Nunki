@@ -27,7 +27,7 @@ const BRAND = {
 const PLANES = []
 
 // Videos del hero en 1080p (recomprimidos desde Videos_Raw)
-const VIDEOS = ['hero-8488854.mp4', 'hero-8331940.mp4', 'hero-5885774.mp4']
+const VIDEOS = ['hero-3998455.mp4', 'hero-8488854.mp4', 'hero-8331940.mp4', 'hero-5885774.mp4']
 
 const ars = (n) => '$ ' + Math.round(n).toLocaleString('es-AR')
 
@@ -35,7 +35,7 @@ const ars = (n) => '$ ' + Math.round(n).toLocaleString('es-AR')
 const TIPOS = [
   { titulo: 'Peluquerías', texto: 'Agenda por estilista y servicios largos sin superposiciones.', video: '/landing/tipo-8488854.mp4', poster: '/landing/tipo-8488854.jpg' },
   { titulo: 'Coloristas', texto: 'Recetas de insumos que descuentan el stock en cada color.', video: '/landing/tipo-3996899.mp4', poster: '/landing/tipo-3996899.jpg' },
-  { titulo: 'Barberías', texto: 'Turnos cortos y seguidos, y la caja cerrada en minutos.', video: null, poster: null }, // Pendiente: video de barbería (tipo-barberia.mp4)
+  { titulo: 'Barberías', texto: 'Turnos cortos y seguidos, y la caja cerrada en minutos.', video: '/landing/tipo-barberia.mp4', poster: '/landing/tipo-barberia.jpg' },
   { titulo: 'Salones con equipo', texto: 'Comisiones compartidas, asistencias y permisos por persona.', video: '/landing/tipo-5885774.mp4', poster: '/landing/tipo-5885774.jpg' },
 ]
 
