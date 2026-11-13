@@ -1,3 +1,11 @@
+# Compila la imagen de Nunki y la despliega en Cloud Run (servicio nunki-app).
+# Variables a cargar en el disparador de Cloud Build:
+#   _VITE_SUPABASE_URL, _VITE_SUPABASE_ANON_KEY
+substitutions:
+  _REGION: us-central1
+  _SERVICE: nunki-app
+  _VITE_DB_SCHEMA: nunki
+
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -6,8 +14,30 @@ steps:
       - 'VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}'
       - '--build-arg'
       - 'VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}'
+      - '--build-arg'
+      - 'VITE_DB_SCHEMA=${_VITE_DB_SCHEMA}'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/nunki-app'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE}:$BUILD_ID'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE}:latest'
       - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '--all-tags', 'gcr.io/$PROJECT_ID/${_SERVICE}']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE}'
+      - '--image=gcr.io/$PROJECT_ID/${_SERVICE}:$BUILD_ID'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+
 images:
-  - 'gcr.io/$PROJECT_ID/nunki-app'
+  - 'gcr.io/$PROJECT_ID/${_SERVICE}:$BUILD_ID'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

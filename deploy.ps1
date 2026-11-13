@@ -33,7 +33,7 @@ Write-Host "ID Proyecto GCP: $projectId" -ForegroundColor Yellow
 Write-Host "URL Supabase: $supabaseUrl" -ForegroundColor Gray
 
 # 3. Compilar la imagen usando Cloud Build
-Write-Host "Paso 1/2: Compilando contenedor en Google Cloud Build..." -ForegroundColor Cyan
+Write-Host "Compilando y desplegando con Google Cloud Build..." -ForegroundColor Cyan
 
 # Quoting the entire substitutions argument prevents PowerShell from breaking on commas
 $subs = "--substitutions=_VITE_SUPABASE_URL=$supabaseUrl,_VITE_SUPABASE_ANON_KEY=$supabaseKey"
@@ -45,17 +45,4 @@ if ($LASTEXITCODE -ne 0) {
     exit
 }
 
-# 4. Desplegar en Google Cloud Run
-Write-Host "Paso 2/2: Desplegando en Google Cloud Run..." -ForegroundColor Cyan
-gcloud run deploy nunki-app `
-  --image="gcr.io/$projectId/nunki-app" `
-  --platform="managed" `
-  --region="us-central1" `
-  --allow-unauthenticated
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Error al desplegar la aplicacion en Cloud Run."
-    exit
-}
-
-Write-Host "Despliegue finalizado con exito!" -ForegroundColor Green
+Write-Host "Despliegue finalizado con exito! Servicio: nunki-app" -ForegroundColor Green
