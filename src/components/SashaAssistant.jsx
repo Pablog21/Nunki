@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { procesarMensajeSasha } from '../lib/sashaGeminiService'
+import { procesarMensajeSasha, fetchResumenComandas } from '../lib/sashaGeminiService'
+import { useNavigate } from 'react-router-dom'
+import SashaFace from './SashaFace'
+import { esAdmin } from '../lib/roles'
 import { 
-  Sparkles, Mic, MicOff, Send, X, Minimize2, 
+  Mic, MicOff, Send, X, Minimize2, 
   Volume2, VolumeX, Calendar, Check, Trash2, 
   FileText, Clock, User, Scissors, AlertCircle, Plus, Sliders
 } from 'lucide-react'
@@ -16,6 +19,9 @@ export default function SashaAssistant() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const saludoHechoRef = useRef(false)
+  const navigate = useNavigate()
   const [availableVoices, setAvailableVoices] = useState([])
   const [selectedVoiceName, setSelectedVoiceName] = useState('')
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
@@ -25,7 +31,7 @@ export default function SashaAssistant() {
     {
       id: 'welcome',
       sender: 'assistant',
-      text: '¡Hola! Soy Sasha, tu asistente virtual. Puedo agendar turnos, registrar comandas y responderte dudas sobre el historial de tus clientes. Puedes hablarme o escribirme.'
+      text: '¡Hola! Soy Sasha, tu asistente. Estoy mirando cómo viene el día…'
     }
   ])
   const [inputText, setInputText] = useState('')
@@ -220,6 +226,9 @@ export default function SashaAssistant() {
       utterance.rate = 0.96  // Ligeramente más pausado para eliminar efecto metálico
       utterance.pitch = 1.02 // Entonación cálida
 
+      utterance.onstart = () => setIsSpeaking(true)
+      utterance.onend = () => setIsSpeaking(false)
+      utterance.onerror = () => setIsSpeaking(false)
       window.speechSynthesis.speak(utterance)
     } catch (e) {
       console.warn('Error en síntesis de voz:', e)
@@ -652,6 +661,75 @@ export default function SashaAssistant() {
     }))
   }
 
+  // Saludo personalizado con datos reales del salón (una vez por sesión)
+  useEffect(() => {
+    if (!isOpen || saludoHechoRef.current || !activeEmpresaId || !userProfile) return
+    saludoHechoRef.current = true
+
+    const armarSaludo = async () => {
+      const ahora = new Date()
+      const h = ahora.getHours()
+      const momento = h < 13 ? 'Buen día' : h < 20 ? 'Buenas tardes' : 'Buenas noches'
+      const nombre = (userProfile?.nombre_completo || '').trim().split(' ')[0]
+      const admin = esAdmin(userProfile)
+      const partes = []
+
+      try {
+        const ini = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString()
+        const fin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59).toISOString()
+        let q = supabase.from('turnos')
+          .select('fecha_hora_inicio, cliente_nombre_rapido, clientes(nombre)')
+          .eq('empresa_id', activeEmpresaId)
+          .gte('fecha_hora_inicio', ini).lte('fecha_hora_inicio', fin)
+          .neq('estado', 'Cancelado')
+          .order('fecha_hora_inicio')
+        if (!admin) q = q.eq('colaborador_id', userProfile.id)
+        const { data: turnosHoy } = await q
+        const lista = turnosHoy || []
+        const proximo = lista.find((t) => new Date(t.fecha_hora_inicio) > ahora)
+        if (lista.length === 0) {
+          partes.push(admin ? 'Hoy no hay turnos agendados todavía.' : 'Hoy no tenés turnos agendados todavía.')
+        } else {
+          const quien = admin ? `Hoy hay ${lista.length} turno${lista.length > 1 ? 's' : ''}` : `Hoy tenés ${lista.length} turno${lista.length > 1 ? 's' : ''}`
+          if (proximo) {
+            const hora = new Date(proximo.fecha_hora_inicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
+            const cliente = proximo.clientes?.nombre || proximo.cliente_nombre_rapido || 'un cliente'
+            partes.push(`${quien}; el próximo es a las ${hora} con ${cliente}.`)
+          } else {
+            partes.push(`${quien} y ya pasaron todos.`)
+          }
+        }
+
+        if (admin) {
+          const resumen = await fetchResumenComandas(activeEmpresaId, 'hoy')
+          if (resumen?.cantidad > 0) {
+            partes.push(`Van ${resumen.cantidad} comanda${resumen.cantidad > 1 ? 's' : ''} por $${Math.round(resumen.totalMonto).toLocaleString('es-AR')}.`)
+          }
+          const m0 = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1).toISOString()
+          const m1 = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1, 23, 59, 59).toISOString()
+          const { count } = await supabase.from('turnos')
+            .select('id', { count: 'exact', head: true })
+            .eq('empresa_id', activeEmpresaId)
+            .gte('fecha_hora_inicio', m0).lte('fecha_hora_inicio', m1)
+            .neq('estado', 'Cancelado')
+            .is('recordatorio_enviado_at', null)
+          if (count > 0) partes.push(`Mañana hay ${count} turno${count > 1 ? 's' : ''} sin recordar por WhatsApp.`)
+        }
+      } catch (err) {
+        console.warn('Sasha: no pude armar el resumen del día', err)
+      }
+
+      const texto = `¡${momento}${nombre ? `, ${nombre}` : ''}! ${partes.join(' ')} ¿En qué te ayudo? Podés hablarme o escribirme.`
+      setMessages((ms) => ms.map((m) => (m.id === 'welcome' ? { ...m, text: texto } : m)))
+      speakText(texto)
+    }
+
+    armarSaludo()
+  }, [isOpen, activeEmpresaId, userProfile]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const estadoSasha = isRecording ? 'listening' : isProcessing ? 'thinking' : isSpeaking ? 'speaking' : 'idle'
+  const textoEstado = isRecording ? 'Escuchándote…' : isProcessing ? 'Pensando…' : isSpeaking ? 'Hablando…' : 'Lista para ayudarte'
+
   return (
     <>
       {/* Botón flotante para abrir a Sasha */}
@@ -664,11 +742,8 @@ export default function SashaAssistant() {
           }}
           title="Hablar con Sasha (Asistente IA)"
         >
-          <div className="sasha-avatar-badge">
-            <Sparkles size={18} />
-            <div className="sasha-pulse-ring" />
-          </div>
-          <span>Sasha AI</span>
+          <SashaFace size={34} estado="idle" />
+          <span>Sasha</span>
         </button>
       )}
 
@@ -678,16 +753,14 @@ export default function SashaAssistant() {
           {/* Cabecera */}
           <div className="sasha-header">
             <div className="sasha-header-info">
-              <div className="sasha-header-avatar">
-                <Sparkles size={20} />
-              </div>
+              <SashaFace size={40} estado={estadoSasha} animada={isMinimized} />
               <div>
                 <div className="sasha-header-title">
                   Sasha <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-secondary)' }}>Nunki</span>
                 </div>
                 <div className="sasha-header-status">
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} />
-                  {isRecording ? 'Escuchando tu voz...' : isProcessing ? 'Pensando...' : 'Lista'}
+                  <span className={`sasha-status-dot ${estadoSasha}`} />
+                  {textoEstado}
                 </div>
               </div>
             </div>
@@ -766,14 +839,17 @@ export default function SashaAssistant() {
 
           {!isMinimized && (
             <>
+              {/* Escenario: Sasha en grande */}
+              <div className={`sasha-stage ${estadoSasha}`}>
+                <SashaFace size={112} estado={estadoSasha} />
+              </div>
+
               {/* Mensajes del chat */}
               <div className="sasha-messages-container">
                 {messages.map((m) => (
                   <div key={m.id} className={`sasha-msg ${m.sender}`}>
                     {m.sender === 'assistant' && (
-                      <div className="sasha-msg-avatar">
-                        <Sparkles size={14} />
-                      </div>
+                      <SashaFace size={28} animada={false} />
                     )}
                     <div style={{ maxWidth: '100%' }}>
                       <div className="sasha-msg-bubble">
@@ -1076,9 +1152,7 @@ export default function SashaAssistant() {
 
                 {isProcessing && (
                   <div className="sasha-msg assistant">
-                    <div className="sasha-msg-avatar">
-                      <Sparkles size={14} />
-                    </div>
+                    <SashaFace size={28} estado="thinking" />
                     <div className="sasha-msg-bubble" style={{ fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span className="sasha-spinner" style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #B4612A', borderTopColor: 'transparent', borderRadius: '50%', animation: 'sashaRotate 0.8s linear infinite' }} />
                       Sasha está procesando tu solicitud...
@@ -1098,6 +1172,13 @@ export default function SashaAssistant() {
                   }
                 }}
               >
+                <button
+                  type="button"
+                  className="sasha-chip"
+                  onClick={() => navigate('/reservas')}
+                >
+                  🔔 Recordatorios de mañana
+                </button>
                 <button
                   type="button"
                   className="sasha-chip"
