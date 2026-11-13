@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { Users, Scissors, Package, LayoutDashboard, LogOut, FileText, ShoppingCart, Settings, Building, UserCheck, Clock, Wallet, Calendar, Sparkles, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Menu, X, Bell } from 'lucide-react'
+import { Users, Scissors, Package, LayoutDashboard, LogOut, FileText, ShoppingCart, Settings, Building, UserCheck, Clock, Wallet, Calendar, Sparkles, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Menu, X, Bell, ShieldCheck } from 'lucide-react'
 import SashaAssistant from './SashaAssistant'
 import { updateAppBranding } from '../lib/pwaBranding'
 import { esOperador } from '../lib/roles'
@@ -267,6 +267,12 @@ export default function Layout() {
           </button>
           
           <nav style={{ flex: 1, overflowY: 'auto' }}>
+            {userProfile?.rol === 'super_admin' && (
+              <NavLink to="/panel" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                <ShieldCheck size={20} />
+                Panel Nunki
+              </NavLink>
+            )}
             {!isOperator && (
               <NavLink to="/" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                 <LayoutDashboard size={20} />

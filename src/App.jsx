@@ -17,6 +17,7 @@ const Caja = lazy(() => import('./pages/Caja'))
 const Agenda = lazy(() => import('./pages/Agenda'))
 const Reservas = lazy(() => import('./pages/Reservas'))
 const Reserva = lazy(() => import('./pages/Reserva'))
+const SuperAdmin = lazy(() => import('./pages/SuperAdmin'))
 import './index.css'
 
 // Componente para proteger las rutas (solo usuarios logueados)
@@ -59,6 +60,7 @@ function AppContent() {
             <Route path="agenda" element={<Agenda />} />
             <Route path="reservas" element={<Reservas />} />
             <Route path="configuracion" element={<Configuracion />} />
+            <Route path="panel" element={<SuperAdmin />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Route>
         )}

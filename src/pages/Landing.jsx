@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient'
 import './Landing.css'
 import { NunkiSymbol } from '../components/NunkiLogo'
 import SashaFace from '../components/SashaFace'
+import { PLANES, formatoPesos, PRUEBA_DIAS, DESCUENTO_ANUAL } from '../lib/planes'
 
 /* ====================================================================
    CONFIGURACIÓN COMERCIAL — cambiar aquí marca, contacto y precios.
@@ -25,7 +26,7 @@ const BRAND = {
 
 // Dejar vacío para ocultar la sección de precios (se muestra "Pedí tu cotización").
 // Ejemplo: { nombre: 'Salón', precio: '$ 00.000', periodo: '/mes', detalle: 'Hasta 5 profesionales', items: ['Agenda', 'Caja'], destacado: true }
-const PLANES = []
+
 
 // Videos del hero en 1080p (recomprimidos desde Videos_Raw)
 const VIDEOS = ['hero-3998455.mp4', 'hero-8488854.mp4', 'hero-8331940.mp4', 'hero-5885774.mp4']
@@ -109,7 +110,7 @@ const FAQS = [
   { q: '¿Mis empleados ven la caja y las ganancias?', a: 'No, salvo que vos lo decidas. Hay perfiles de administrador y de operador: el equipo carga turnos y comandas; los números del negocio los ve el dueño.' },
   { q: '¿Mis datos están separados de otros salones?', a: 'Sí. Cada salón tiene su propio espacio, su logo y sus usuarios, y solo accede a su información.' },
   { q: '¿Qué es ' + BRAND.asistente + '?', a: 'Es la asistente con inteligencia artificial del sistema. Le hablás o le escribís y agenda turnos, arma comandas y responde consultas sobre clientes y facturación. Siempre te pide confirmación antes de guardar.' },
-  { q: '¿Cuánto cuesta?', a: PLANES.length ? 'Mirá los planes más arriba. Si tenés varias sucursales, escribinos.' : 'Depende de la cantidad de profesionales de tu salón. Escribinos y te pasamos una cotización el mismo día.' },
+  { q: '¿Cuánto cuesta?', a: `El plan Esencial cuesta ${formatoPesos(PLANES[0].precio)} por mes y el Premium ${formatoPesos(PLANES[1].precio)}. Los dos tienen ${PRUEBA_DIAS} días de prueba gratis. Si tenés varias sucursales, escribinos.` },
 ]
 
 function waLink(texto) {
@@ -130,7 +131,7 @@ export default function Landing() {
   const [contactOpen, setContactOpen] = useState(false)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
-  const [form, setForm] = useState({ nombre: '', salon: '', telefono: '', email: '', profesionales: '', mensaje: '' })
+  const [form, setForm] = useState({ nombre: '', salon: '', telefono: '', email: '', profesionales: '', mensaje: '', plan: '' })
 
   // Calculadora: tiempo administrativo recuperado
   const [profesionales, setProfesionales] = useState(4)
@@ -179,6 +180,12 @@ export default function Landing() {
     }, 900)
   }
 
+  const elegirPlan = (id) => {
+    setForm((f) => ({ ...f, plan: id }))
+    setSent(false)
+    setContactOpen(true)
+  }
+
   const abrirContacto = () => {
     setSent(false)
     setContactOpen(true)
@@ -199,7 +206,9 @@ export default function Landing() {
         salon: form.salon,
         telefono: form.telefono,
         email: form.email,
-        mensaje: [form.profesionales && `Profesionales: ${form.profesionales}`, form.mensaje].filter(Boolean).join(' — '),
+        profesionales: form.profesionales || null,
+        plan_interes: form.plan || null,
+        mensaje: form.mensaje || null,
       }])
     } catch (err) {
       console.warn('No se pudo guardar el contacto en la base:', err)
@@ -207,6 +216,7 @@ export default function Landing() {
     const texto =
       `Hola! Soy ${form.nombre}, de ${form.salon}.\n` +
       (form.profesionales ? `Somos ${form.profesionales} profesionales.\n` : '') +
+      (form.plan ? `Me interesa el plan ${form.plan === 'premium' ? 'Premium' : 'Esencial'}.\n` : '') +
       `Tel: ${form.telefono}${form.email ? ` · ${form.email}` : ''}\n` +
       (form.mensaje ? `\n${form.mensaje}` : '')
     const link = waLink(texto)
@@ -234,6 +244,7 @@ export default function Landing() {
           <nav className="lp-links">
             <a href="#funciones">Funciones</a>
             <a href="#asistente">{BRAND.asistente}</a>
+            <a href="#planes">Planes</a>
             <a href="#como">Cómo empezar</a>
             <a href="#faq">Preguntas</a>
           </nav>
@@ -468,25 +479,34 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* PLANES (opcional) */}
-      {PLANES.length > 0 && (
-        <section className="lp-section" id="planes">
-          <div className="lp-wrap">
-            <h2 className="lp-h2">Planes</h2>
-            <div className="lp-plan-grid">
-              {PLANES.map((p) => (
-                <div key={p.nombre} className={`lp-plan ${p.destacado ? 'is-featured' : ''}`}>
-                  <h3>{p.nombre}</h3>
-                  <div className="lp-plan-price">{p.precio}<small>{p.periodo}</small></div>
-                  <p>{p.detalle}</p>
-                  <ul>{p.items.map((it) => <li key={it}><Check size={14} /> {it}</li>)}</ul>
-                  <button className="lp-btn lp-btn-dark" onClick={ctaPrincipal}>Empezar</button>
-                </div>
-              ))}
-            </div>
+      {/* PLANES */}
+      <section className="lp-section" id="planes">
+        <div className="lp-wrap">
+          <span className="lp-kicker">Planes</span>
+          <h2 className="lp-h2">Un precio claro, sin sorpresas</h2>
+          <p className="lp-sub">Probalo {PRUEBA_DIAS} días gratis, sin tarjeta. Te ayudamos a cargar tus servicios y tu equipo.</p>
+          <div className="lp-plan-grid">
+            {PLANES.map((p) => (
+              <div key={p.id} className={`lp-plan ${p.destacado ? 'is-featured' : ''}`}>
+                {p.destacado && <span className="lp-plan-badge">WhatsApp automático</span>}
+                <h3>{p.nombre}</h3>
+                <div className="lp-plan-price">{formatoPesos(p.precio)}<small>{p.periodo}</small></div>
+                <p className="lp-plan-detalle">{p.detalle}</p>
+                <ul>
+                  {p.items.map((it) => (
+                    <li key={it}><Check size={15} /> <span>{it}{p.pronto?.includes(it) && <em className="lp-pronto">Pronto</em>}</span></li>
+                  ))}
+                </ul>
+                {p.extra && <small className="lp-note">{p.extra}</small>}
+                <button className={`lp-btn ${p.destacado ? 'lp-btn-primary' : 'lp-btn-dark'}`} onClick={() => elegirPlan(p.id)}>
+                  Quiero el plan {p.nombre}
+                </button>
+              </div>
+            ))}
           </div>
-        </section>
-      )}
+          <p className="lp-note lp-plan-pie">Precios finales en pesos, IVA incluido. {DESCUENTO_ANUAL}.</p>
+        </div>
+      </section>
 
       {/* CÓMO EMPEZAR */}
       <section className="lp-section" id="como">
@@ -570,6 +590,12 @@ export default function Landing() {
                       <option>4 a 8</option>
                       <option>9 a 15</option>
                       <option>Más de 15 o varias sucursales</option>
+                    </select>
+                  </label>
+                  <label>Plan que te interesa
+                    <select value={form.plan} onChange={set('plan')}>
+                      <option value="">Todavía no sé</option>
+                      {PLANES.map((p) => <option key={p.id} value={p.id}>{p.nombre} · {formatoPesos(p.precio)}/mes</option>)}
                     </select>
                   </label>
                   <label className="lp-span2">¿Algo que quieras resolver primero?<textarea rows="3" value={form.mensaje} onChange={set('mensaje')} placeholder="Ej: la caja, las comisiones, los turnos…" /></label>

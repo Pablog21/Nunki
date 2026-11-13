@@ -159,11 +159,20 @@
 /* Planes */
 .lp-plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-top: 40px; }
 .lp-plan { background: #fff; border: 1px solid var(--lp-line); border-radius: 22px; padding: 28px; display: grid; gap: 12px; }
-.lp-plan.is-featured { border: 2px solid var(--lp-primary); }
+.lp-plan { position: relative; align-content: start; }
+.lp-plan.is-featured { border: 2px solid var(--lp-primary); box-shadow: 0 30px 60px -40px rgba(163,86,31,.55); }
+.lp-plan h3 { margin: 0; font: 700 22px var(--lp-display); }
+.lp-plan-detalle { margin: 0; color: var(--lp-ink-2); }
+.lp-plan li svg { color: var(--lp-primary); flex: none; margin-top: 3px; }
+.lp-plan .lp-btn { margin-top: 6px; justify-content: center; }
+.lp-plan-badge { position: absolute; top: -13px; left: 24px; background: var(--lp-grad); color: #fff; font: 700 12px 'Inter'; letter-spacing: .03em; padding: 5px 12px; border-radius: 999px; }
+.lp-pronto { display: inline-block; margin-left: 6px; font-style: normal; font-size: 11px; font-weight: 700; color: #9A5223; background: #F6E3D5; border-radius: 999px; padding: 1px 8px; vertical-align: 1px; }
+.lp-plan-grid { max-width: 880px; }
+.lp-plan-pie { display: block; margin-top: 18px; }
 .lp-plan-price { font: 800 36px var(--lp-display); }
 .lp-plan-price small { font: 500 15px 'Inter'; color: var(--lp-muted); }
 .lp-plan ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 14.5px; }
-.lp-plan li { display: flex; gap: 8px; align-items: center; }
+.lp-plan li { display: flex; gap: 8px; align-items: flex-start; }
 
 /* Pasos */
 .lp-steps { list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: s; }
