@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MessageCircle, CheckCircle2, Link2, Copy, Calendar, Globe, Bell } from 'lucide-react'
+import { useSearchParams, Link as RLink } from 'react-router-dom'
+import AgendaTabs from '../components/AgendaTabs'
+import { MessageCircle, CheckCircle2, Link2, Copy, Calendar, Check } from 'lucide-react'
+import PortalEditor from '../components/PortalEditor'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { esAdmin } from '../lib/roles'
@@ -17,7 +20,8 @@ const slugify = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]
 export default function Reservas() {
   const { userProfile, activeEmpresaId } = useAuth()
   const admin = esAdmin(userProfile)
-  const [tab, setTab] = useState('recordatorios')
+  const [params] = useSearchParams()
+  const tab = params.get('tab') === 'online' && admin ? 'online' : 'recordatorios'
   const [empresa, setEmpresa] = useState(null)
 
   useEffect(() => {
@@ -27,20 +31,7 @@ export default function Reservas() {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      <header className="page-header">
-        <h1 className="page-title">Reservas y recordatorios</h1>
-      </header>
-
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <button className={`btn ${tab === 'recordatorios' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setTab('recordatorios')}>
-          <Bell size={16} /> Recordatorios por WhatsApp
-        </button>
-        {admin && (
-          <button className={`btn ${tab === 'online' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setTab('online')}>
-            <Globe size={16} /> Reserva online
-          </button>
-        )}
-      </div>
+      <AgendaTabs actual={tab} />
 
       {tab === 'recordatorios' && <Recordatorios empresa={empresa} empresaId={activeEmpresaId} />}
       {tab === 'online' && admin && <ConfigOnline empresa={empresa} setEmpresa={setEmpresa} empresaId={activeEmpresaId} />}
@@ -182,6 +173,8 @@ function ConfigOnline({ empresa, setEmpresa, empresaId }) {
   if (!form) return <div className="glass-panel" style={{ padding: '1.5rem' }}>Cargando…</div>
 
   const link = `${window.location.origin}/r/${form.slug}`
+  const reservables = servicios.filter((s) => s.reservable_online !== false).length
+  const listo = Boolean(empresa?.reserva_online_activa) && reservables > 0
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
   const toggleDia = (n) => setForm((f) => ({ ...f, dias_abierto: f.dias_abierto.includes(n) ? f.dias_abierto.filter((d) => d !== n) : [...f.dias_abierto, n].sort() }))
 
@@ -208,7 +201,7 @@ function ConfigOnline({ empresa, setEmpresa, empresaId }) {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
-      <form className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }} onSubmit={guardar}>
+      <form className="glass-panel po-form" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }} onSubmit={guardar}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600 }}>
           <input type="checkbox" checked={form.reserva_online_activa} onChange={set('reserva_online_activa')} />
           Recibir reservas online
@@ -248,6 +241,20 @@ function ConfigOnline({ empresa, setEmpresa, empresaId }) {
       </form>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="glass-panel po-estado">
+          <h3>Tu página está {listo ? <span className="po-activa">lista para recibir turnos</span> : <span className="po-inactiva">inactiva</span>}</h3>
+          <ul>
+            <li className={empresa?.reserva_online_activa ? 'ok' : ''}><span className="dot">{empresa?.reserva_online_activa && <Check size={12} />}</span>
+              {empresa?.reserva_online_activa ? 'Reserva online activada' : 'Marcá "Recibir reservas online" y guardá'}</li>
+            <li className={reservables > 0 ? 'ok' : ''}><span className="dot">{reservables > 0 && <Check size={12} />}</span>
+              {servicios.length === 0
+                ? <span>Cargá al menos un servicio en <RLink to="/servicios">Servicios</RLink></span>
+                : reservables > 0 ? `${reservables} servicio${reservables === 1 ? '' : 's'} para reservar` : 'Elegí qué servicios se pueden reservar'}</li>
+            <li className={empresa?.whatsapp ? 'ok' : ''}><span className="dot">{empresa?.whatsapp && <Check size={12} />}</span>
+              {empresa?.whatsapp ? 'WhatsApp cargado' : 'Cargá el WhatsApp del salón (opcional)'}</li>
+          </ul>
+        </div>
+        <PortalEditor key={empresa?.id} empresa={empresa} empresaId={empresaId} link={link} onGuardado={(d) => d && setEmpresa(d)} />
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}><Link2 size={18} /> Tu link de reservas</h3>
           <p style={{ wordBreak: 'break-all', fontWeight: 600 }}>{link}</p>

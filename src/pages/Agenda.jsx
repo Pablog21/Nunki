@@ -1,3 +1,4 @@
+import AgendaTabs from '../components/AgendaTabs'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
@@ -1213,6 +1214,7 @@ Estado: ${t.estado || 'Pendiente'}`}
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
+      <AgendaTabs actual="agenda" />
       {/* HEADER SECTION */}
       <header className="page-header" style={{ marginBottom: '2rem' }}>
         <div>

@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 import { ArrowLeft, Check, Clock, MessageCircle, User } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { NunkiSymbol } from '../components/NunkiLogo'
+import PortalPortada from '../components/PortalPortada'
+import { fondoPortada } from '../lib/portal'
 import { formatearDia, formatearHora, linkWhatsApp } from '../lib/whatsapp'
 import './Reserva.css'
 
@@ -100,8 +102,9 @@ export default function Reserva() {
     return (
       <div className="rv"><div className="rv-card rv-center">
         <NunkiSymbol size={40} title="Nunki" />
-        <h1>Este link de reservas no está activo</h1>
-        <p>Consultá con el salón por otro medio.</p>
+        <h1>Este link de reservas todavía no está activo</h1>
+        <p>Consultá con el salón por WhatsApp o redes mientras tanto.</p>
+        <p className="rv-inactivo-dueno">¿Sos el dueño del salón? Activala desde Nunki, en <strong>Agenda → Reserva online</strong>: marcá "Recibir reservas online", elegí qué servicios se pueden reservar y guardá.</p>
       </div></div>
     )
   }
@@ -127,15 +130,10 @@ export default function Reserva() {
   const paso = !servicio ? 1 : !dia || !hora ? 2 : 3
 
   return (
-    <div className="rv">
+    <div className="rv" style={{ '--rv-acento': fondoPortada({ estilo: salon.portal_estilo, bannerUrl: salon.portal_banner_url }).acento }}>
       <div className="rv-card">
-        <header className="rv-head">
-          {salon.logo_url ? <img src={salon.logo_url} alt="" className="rv-logo" /> : <NunkiSymbol size={40} />}
-          <div>
-            <h1>{salon.nombre}</h1>
-            <p className="rv-muted">{salon.descripcion || 'Reservá tu turno online'}</p>
-          </div>
-        </header>
+        <PortalPortada nombre={salon.nombre} descripcion={salon.descripcion} logoUrl={salon.logo_url}
+          estilo={salon.portal_estilo} bannerUrl={salon.portal_banner_url} />
 
         <ol className="rv-steps" aria-label="Pasos">
           <li className={paso >= 1 ? 'on' : ''}>Servicio</li>

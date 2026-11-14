@@ -20,6 +20,7 @@ const Reservas = lazyConRecarga(() => import('./pages/Reservas'))
 const Reserva = lazyConRecarga(() => import('./pages/Reserva'))
 const SuperAdmin = lazyConRecarga(() => import('./pages/SuperAdmin'))
 const MiPlan = lazyConRecarga(() => import('./pages/MiPlan'))
+const Resultados = lazyConRecarga(() => import('./pages/Resultados'))
 import './index.css'
 
 // Componente para proteger las rutas (solo usuarios logueados)
@@ -64,6 +65,7 @@ function AppContent() {
             <Route path="configuracion" element={<Configuracion />} />
             <Route path="panel" element={<SuperAdmin />} />
             <Route path="mi-plan" element={<MiPlan />} />
+            <Route path="resultados" element={<Resultados />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Route>
         )}

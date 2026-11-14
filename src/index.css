@@ -1267,3 +1267,13 @@ body.light-theme .calc-result-box {
 }
 
 .nav-link-boton { width: 100%; background: none; border: 0; font: inherit; text-align: left; cursor: pointer; }
+
+/* Pestañas de la sección Agenda */
+.ag-tabs { display: flex; gap: 4px; padding: 4px; margin-bottom: 1.25rem; border-radius: 14px; background: var(--surface-color, rgba(255,255,255,.04)); border: 1px solid var(--surface-border, rgba(255,255,255,.1)); width: fit-content; max-width: 100%; overflow-x: auto; }
+.ag-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; color: var(--text-secondary); text-decoration: none; font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.ag-tab:hover { color: var(--text-primary); }
+.ag-tab.on { background: var(--primary-color); color: var(--on-primary, #fff); }
+@media (max-width: 520px) {
+  .ag-tabs { width: 100%; }
+  .ag-tab { flex: 1; justify-content: center; padding: 8px 6px; font-size: .8rem; gap: 4px; }
+}

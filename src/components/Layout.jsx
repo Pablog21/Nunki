@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { Users, Scissors, Package, LayoutDashboard, LogOut, FileText, ShoppingCart, Settings, Building, UserCheck, Clock, Wallet, Calendar, Sparkles, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Menu, X, Bell, ShieldCheck, CreditCard, GraduationCap } from 'lucide-react'
+import { Users, Scissors, Package, LayoutDashboard, LogOut, FileText, ShoppingCart, Settings, Building, UserCheck, Clock, Wallet, Calendar, Sparkles, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Menu, X, Bell, ShieldCheck, CreditCard, GraduationCap, TrendingUp } from 'lucide-react'
 import SashaAssistant from './SashaAssistant'
 import { updateAppBranding } from '../lib/pwaBranding'
 import { esOperador } from '../lib/roles'
@@ -306,13 +306,15 @@ export default function Layout() {
                 Dashboard
               </NavLink>
             )}
-            <NavLink to="/agenda" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+            {!isOperator && (
+              <NavLink to="/resultados" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                <TrendingUp size={20} />
+                Resultados
+              </NavLink>
+            )}
+            <NavLink to="/agenda" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive || location.pathname === '/reservas' ? "nav-link active" : "nav-link")}>
               <Calendar size={20} />
-              Agenda / Turnos
-            </NavLink>
-            <NavLink to="/reservas" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              <Bell size={20} />
-              Reservas y recordatorios
+              Agenda
             </NavLink>
             <NavLink to="/clientes" onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
               <Users size={20} />

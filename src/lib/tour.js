@@ -13,6 +13,11 @@ export const TOUR_GENERAL = [
     texto: 'Acá ves de un vistazo cómo viene el salón: lo facturado, los turnos de hoy y las comisiones de cada profesional.',
   },
   {
+    id: 'resultados', ruta: '/resultados', objetivo: { nav: '/resultados' }, soloAdmin: true,
+    titulo: 'Resultados',
+    texto: 'Cuánto ganaste de verdad: ventas menos costos, comisiones y gastos. Qué servicios dejan más margen, cómo rinde cada profesional y qué clientes conviene volver a llamar.',
+  },
+  {
     id: 'agenda', ruta: '/agenda', objetivo: { nav: '/agenda' },
     titulo: 'La agenda',
     texto: 'Todos los turnos del día y de la semana, por profesional. Podés verla por día, semana, mes o en lista.',
@@ -23,9 +28,9 @@ export const TOUR_GENERAL = [
     texto: 'Con este botón cargás un turno en segundos: elegís cliente, servicio, profesional y horario. También podés tocar un hueco libre de la agenda.',
   },
   {
-    id: 'reservas', ruta: '/reservas', objetivo: { nav: '/reservas' },
-    titulo: 'Reservas y recordatorios',
-    texto: 'Tus clientes pueden reservar solos desde tu página. Y la noche anterior, mandás los recordatorios por WhatsApp con un toque para que nadie falte.',
+    id: 'reservas', ruta: '/agenda', objetivo: { css: '.ag-tabs' },
+    titulo: 'Recordatorios y reserva online',
+    texto: 'Arriba de la agenda tenés dos pestañas más: Recordatorios, para mandar por WhatsApp los turnos de mañana con un toque, y Reserva online, tu página para que te reserven solos.',
   },
   {
     id: 'clientes', ruta: '/clientes', objetivo: { nav: '/clientes' },
@@ -120,9 +125,10 @@ export const GUIAS = [
     id: 'reserva-online', titulo: 'Activá tu reserva online', progreso: 'reserva_online', soloAdmin: true,
     resumen: 'Tu link para que te reserven 24/7.',
     pasos: [
-      { ruta: '/reservas', objetivo: { boton: 'Reserva online' }, accion: 'clic', titulo: 'Paso 1 · Reserva online', texto: 'Abrí la pestaña "Reserva online".' },
-      { objetivo: { css: '.main-content form, .main-content .glass-panel' }, titulo: 'Paso 2 · Configurala', texto: 'Elegí la dirección de tu página, tus horarios y qué servicios se pueden reservar. Activala y guardá.' },
-      { objetivo: null, titulo: 'Paso 3 · Compartila', texto: 'Poné el link en tu Instagram y en tu WhatsApp. Cada reserva cae directo en tu agenda.' },
+      { ruta: '/agenda', objetivo: { css: '.ag-tab[href="/reservas?tab=online"]' }, accion: 'clic', titulo: 'Paso 1 · Reserva online', texto: 'En Agenda, abrí la pestaña "Reserva online".' },
+      { ruta: '/reservas?tab=online', objetivo: { css: '.main-content form' }, titulo: 'Paso 2 · Configurala', texto: 'Marcá "Recibir reservas online", elegí la dirección de tu página y tus horarios, y guardá.' },
+      { ruta: '/reservas?tab=online', objetivo: { css: '.pe' }, titulo: 'Paso 3 · Ponele tu estilo', texto: 'Subí tu logo y un banner con una foto de tu salón, o elegí uno de los estilos. Se ve al instante en la vista previa.' },
+      { objetivo: null, titulo: 'Paso 4 · Compartila', texto: 'Poné el link en tu Instagram y en tu WhatsApp. Cada reserva cae directo en tu agenda.' },
     ],
   },
 ]

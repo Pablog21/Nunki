@@ -43,7 +43,7 @@ export default function TourGuiado({ pasos, indice, setIndice, guia, navigate, o
 
   // Ir a la pantalla del paso
   useEffect(() => {
-    if (paso?.ruta && window.location.pathname !== paso.ruta) navigate(paso.ruta)
+    if (paso?.ruta && window.location.pathname + window.location.search !== paso.ruta) navigate(paso.ruta)
   }, [paso, navigate])
 
   // Buscar el elemento (puede tardar en aparecer mientras carga la pantalla)

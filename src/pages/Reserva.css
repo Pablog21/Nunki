@@ -37,3 +37,25 @@
 .rv-ok { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: #E4EFE8; color: #2F6B55; }
 .rv-error { color: #B42318; font-size: 14px; }
 .rv-foot { text-align: center; color: #56695F; font-size: 13px; margin-top: 18px; }
+
+/* Portada personalizable del salón */
+.rv { --rv-acento: #A3561F; }
+.pp-portada { position: relative; margin: -24px -24px 8px; border-radius: 20px 20px 0 0; overflow: hidden; }
+.pp-banner { height: 150px; background-size: cover; background-position: center; }
+.pp-identidad { display: flex; align-items: flex-end; gap: 14px; padding: 0 20px 6px; margin-top: -38px; position: relative; }
+.pp-logo { width: 76px; height: 76px; flex: none; border-radius: 20px; background: #fff; border: 3px solid #fff; box-shadow: 0 10px 24px -12px rgba(15,42,36,.6); display: grid; place-items: center; overflow: hidden; color: #0F2A24; }
+.pp-logo img { width: 100%; height: 100%; object-fit: cover; }
+.pp-textos { padding: 42px 0 2px; min-width: 0; }
+.pp-textos h1 { margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 22px; color: #0F2A24; line-height: 1.15; }
+.pp-textos p { margin: 3px 0 0; color: #56695F; font-size: 14px; }
+.pp-compacta .pp-banner { height: 96px; }
+.pp-compacta .pp-identidad { margin-top: -28px; padding: 0 14px 4px; }
+.pp-compacta .pp-logo { width: 56px; height: 56px; border-radius: 14px; }
+.pp-compacta .pp-textos { padding-top: 32px; }
+.pp-compacta .pp-textos h1 { font-size: 16px; }
+.pp-compacta .pp-textos p { font-size: 12px; }
+.rv-btn { background: var(--rv-acento) !important; }
+.rv-steps li.on { border-color: var(--rv-acento); }
+.rv-item:hover { border-color: var(--rv-acento); }
+.rv input:focus, .rv textarea:focus { border-color: var(--rv-acento); }
+.rv-inactivo-dueno { margin-top: 12px; padding: 12px; border-radius: 12px; background: #FBF3EC; color: #3D5249; font-size: 13px; }

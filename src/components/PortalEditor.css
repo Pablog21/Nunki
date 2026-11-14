@@ -1,0 +1,31 @@
+.pe { padding: 1.5rem; display: grid; gap: 1rem; }
+.pe-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.pe-head h3 { margin: 0; }
+.pe-estado { display: inline-flex; align-items: center; gap: 4px; font-size: .82rem; color: var(--text-secondary); }
+.pe-estado.ok { color: #6FC79E; }
+.pe-preview { border-radius: 18px; overflow: hidden; background: #FFFFFF; border: 1px solid #DDD6CA; color: #0F2A24; padding: 24px 24px 12px; }
+.pe-preview .pp-portada { margin: -24px -24px 6px; border-radius: 0; }
+.pe-preview-pie { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #56695F; padding-top: 6px; border-top: 1px solid #EEE8DE; }
+.pe-preview-pie a { display: inline-flex; align-items: center; gap: 4px; color: #9A5223; font-weight: 600; text-decoration: none; }
+.pe-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pe-ayuda { margin: 0; font-size: .82rem; color: var(--text-secondary); }
+.pe-estilos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+.pe-estilo { display: grid; gap: 4px; padding: 4px; border-radius: 14px; border: 2px solid transparent; background: none; color: inherit; cursor: pointer; font: inherit; text-align: center; }
+.pe-estilo.on { border-color: #D9824A; }
+.pe-estilo:hover .pe-muestra { transform: scale(1.03); }
+.pe-muestra { position: relative; display: block; height: 58px; border-radius: 10px; background-size: cover; background-position: center; transition: transform .15s; border: 1px solid rgba(0,0,0,.08); }
+.pe-muestra i { position: absolute; right: 6px; bottom: 6px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; }
+.pe-estilo small { font-size: .75rem; color: var(--text-secondary); }
+
+/* Estado de la página de reservas */
+.po-estado { padding: 1.25rem 1.5rem; display: grid; gap: .6rem; }
+.po-estado h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.po-estado ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.po-estado li { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
+.po-estado li span.dot { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; flex: none; border: 2px solid rgba(157,184,168,.5); }
+.po-estado li.ok span.dot { background: #6FC79E; border-color: #6FC79E; color: #0B1F1A; }
+.po-estado li a { color: #E39461; font-weight: 600; }
+.po-activa { color: #6FC79E; }
+.po-inactiva { color: #E39461; }
+.po-form > label, .po-form > div > label { display: grid; gap: 0; }
+.po-form > label > input:not([type=checkbox]), .po-form > label > textarea, .po-form > div > label > input { width: 100%; }
