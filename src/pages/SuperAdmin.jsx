@@ -466,7 +466,7 @@ function AltaSalon({ inicial, onClose, onCreado }) {
 
   const urlApp = `${window.location.origin}/login`
   const mensaje = resultado
-    ? `¡Hola ${resultado.acceso.nombre.split(' ')[0]}! Ya está listo ${resultado.empresa.nombre} en Nunki 🎉\n\n` +
+    ? `¡Hola ${resultado.acceso.nombre.split(' ')[0]}! Ya está listo ${resultado.empresa.nombre} en Nunki.\n\n` +
       `Entrá desde: ${urlApp}\nUsuario: ${resultado.acceso.email}\nContraseña temporal: ${resultado.acceso.password}\n\n` +
       `Cuando entres, cambiá la contraseña desde tu perfil. Cualquier duda, escribime por acá.`
     : ''

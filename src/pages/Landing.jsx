@@ -133,6 +133,7 @@ export default function Landing() {
   const [contactOpen, setContactOpen] = useState(false)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [errorEnvio, setErrorEnvio] = useState('')
   const [form, setForm] = useState({ nombre: '', salon: '', tipo: '', telefono: '', email: '', profesionales: '', mensaje: '', plan: '' })
 
   // Calculadora: tiempo administrativo recuperado
@@ -202,34 +203,24 @@ export default function Landing() {
   const enviar = async (e) => {
     e.preventDefault()
     setSending(true)
-    try {
-      await supabase.from('contactos_landing').insert([{
-        nombre: form.nombre,
-        salon: form.salon,
-        tipo_negocio: form.tipo || null,
-        telefono: form.telefono,
-        email: form.email,
-        profesionales: form.profesionales || null,
-        plan_interes: form.plan || null,
-        mensaje: form.mensaje || null,
-      }])
-    } catch (err) {
-      console.warn('No se pudo guardar el contacto en la base:', err)
-    }
-    const texto =
-      `Hola! Soy ${form.nombre}, de ${form.salon}${form.tipo ? ` (${TIPO_NEGOCIO[form.tipo]})` : ''}.\n` +
-      (form.profesionales ? `Somos ${form.profesionales} profesionales.\n` : '') +
-      (form.plan ? `Me interesa el plan ${form.plan === 'premium' ? 'Premium' : 'Esencial'}.\n` : '') +
-      `Tel: ${form.telefono}${form.email ? ` · ${form.email}` : ''}\n` +
-      (form.mensaje ? `\n${form.mensaje}` : '')
-    const link = waLink(texto)
-    if (link) {
-      window.open(link, '_blank', 'noopener')
-    } else {
-      const subject = encodeURIComponent(`Demo ${BRAND.nombre} — ${form.salon}`)
-      window.open(`mailto:${BRAND.email}?subject=${subject}&body=${encodeURIComponent(texto)}`, '_blank')
-    }
+    setErrorEnvio('')
+    // La solicitud queda guardada y aparece en el Panel Nunki; no se abre ningún mail ni WhatsApp
+    const { error } = await supabase.from('contactos_landing').insert([{
+      nombre: form.nombre.trim(),
+      salon: form.salon.trim(),
+      tipo_negocio: form.tipo || null,
+      telefono: form.telefono.trim(),
+      email: form.email.trim().toLowerCase(),
+      profesionales: form.profesionales || null,
+      plan_interes: form.plan || null,
+      mensaje: form.mensaje.trim() || null,
+    }])
     setSending(false)
+    if (error) {
+      console.warn('No se pudo guardar la solicitud:', error)
+      setErrorEnvio('No pudimos enviar tu solicitud. Revisá tu conexión y probá de nuevo en un minuto.')
+      return
+    }
     setSent(true)
   }
 
@@ -609,15 +600,16 @@ export default function Landing() {
                   </label>
                   <label className="lp-span2">¿Algo que quieras resolver primero?<textarea rows="3" value={form.mensaje} onChange={set('mensaje')} placeholder="Ej: la caja, las comisiones, los turnos…" /></label>
                 </div>
+                {errorEnvio && <p className="lp-form-error" role="alert">{errorEnvio}</p>}
                 <button className="lp-btn lp-btn-primary lp-btn-block" disabled={sending}>
-                  {sending ? 'Enviando…' : 'Enviar'} <ArrowRight size={16} />
+                  {sending ? 'Enviando…' : 'Pedir mi demo'} <ArrowRight size={16} />
                 </button>
               </form>
             ) : (
               <div className="lp-sent">
                 <div className="lp-sent-icon"><Check size={28} /></div>
                 <h3>¡Gracias, {form.nombre.split(' ')[0] || 'listo'}!</h3>
-                <p>Recibimos tus datos y te escribimos a la brevedad para coordinar la demo.</p>
+                <p>Recibimos tu solicitud para {form.salon || 'tu negocio'}. Te escribimos por WhatsApp a la brevedad para coordinar la demo y darte acceso a tu prueba gratis.</p>
                 <button className="lp-btn lp-btn-dark" onClick={() => setContactOpen(false)}>Cerrar</button>
               </div>
             )}

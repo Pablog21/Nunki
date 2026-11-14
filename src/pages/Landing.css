@@ -311,3 +311,5 @@
   .lp-phone-up { margin-top: 32px; }
 }
 html:has(.lp) { scroll-padding-top: 80px; }
+
+.lp-form-error { color: #B42318; font-size: 14px; margin: 0 0 10px; }
