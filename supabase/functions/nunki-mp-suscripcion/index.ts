@@ -42,6 +42,13 @@ Deno.serve(async (req: Request) => {
     if (empresa.mp_preapproval_estado === 'authorized') return json({ error: 'Este salón ya tiene el débito automático activo.' }, 409)
     if (empresa.moneda === 'USD') return json({ error: 'Las suscripciones en dólares se gestionan aparte. Te contactamos para coordinar el pago.' }, 400)
 
+    // El salón elige el plan al pagar; queda guardado en su cuenta
+    const planElegido = ['esencial', 'premium'].includes(body?.plan) ? body.plan : empresa.plan
+    if (planElegido !== empresa.plan) {
+      await admin.from('empresas').update({ plan: planElegido }).eq('id', empresa.id)
+      empresa.plan = planElegido
+    }
+
     const { data: precioPlan } = await admin.rpc('precio_plan', { p_plan: empresa.plan, p_moneda: 'ARS' })
     const monto = Number(empresa.precio_mensual ?? precioPlan)
     if (!(monto > 0)) return json({ error: 'No hay un precio definido para este plan' }, 400)
@@ -78,7 +85,7 @@ Deno.serve(async (req: Request) => {
       mp_preapproval_id: mp.id, mp_preapproval_estado: mp.status ?? 'pending', mp_payer_email: payerEmail,
     }).eq('id', empresa.id)
 
-    return json({ ok: true, url: mp.init_point })
+    return json({ ok: true, url: mp.init_point, plan: empresa.plan, monto })
   } catch (err) {
     console.error(err)
     return json({ error: 'Error inesperado' }, 500)

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { esAdmin as esAdminFn, esSuperAdmin } from '../lib/roles'
 import { fetchMiEstadoPago, fetchMisPagos, fechaLarga, fechaCorta, textoAviso, precioTexto } from '../lib/facturacion'
 import { planPorId, formatoMonto } from '../lib/planes'
-import PanelPago from '../components/PanelPago'
+import ElegirPlan from '../components/ElegirPlan'
 import '../components/Pagos.css'
 
 const ETIQUETA = {
@@ -54,8 +54,13 @@ export default function MiPlan() {
             {volvioDeMp && !ep.debito_automatico && (
               <p className="pg-inline pg-info">Estamos esperando la confirmación de Mercado Pago. Puede tardar unos minutos; actualizá la página en un rato.</p>
             )}
-            {ep.estado !== 'interna' && <PanelPago ep={ep} emailInicial={user?.email || ''} />}
           </section>
+
+          {ep.estado !== 'interna' && (
+            <section className="glass-panel pg-elegir">
+              <ElegirPlan ep={ep} emailInicial={user?.email || ''} />
+            </section>
+          )}
 
           <section className="glass-panel pg-historial">
             <h3><Receipt size={16} /> Pagos</h3>

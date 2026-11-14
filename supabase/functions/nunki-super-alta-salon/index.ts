@@ -53,7 +53,8 @@ Deno.serve(async (req: Request) => {
   const whatsapp = limpiar(body.salon?.whatsapp, 40) || telefono
   const plan = PLANES.includes(body.salon?.plan) ? body.salon.plan : 'esencial'
   const moneda = body.salon?.moneda === 'USD' ? 'USD' : 'ARS'
-  const diasPrueba = Math.min(Math.max(Number(body.salon?.dias_prueba ?? 14) || 0, 0), 90)
+  const tipoNegocio = ['peluqueria', 'barberia', 'ambos', 'estetica'].includes(body.salon?.tipo_negocio) ? body.salon.tipo_negocio : null
+  const diasPrueba = Math.min(Math.max(Number(body.salon?.dias_prueba ?? 15) || 0, 0), 90)
   const contactoId = body.contacto_id ? limpiar(body.contacto_id, 40) : null
 
   if (!salon) return json({ error: 'Falta el nombre del salón' }, 400)
@@ -77,6 +78,7 @@ Deno.serve(async (req: Request) => {
     whatsapp: whatsapp || null,
     plan,
     moneda,
+    tipo_negocio: tipoNegocio,
     estado_cuenta: diasPrueba > 0 ? 'prueba' : 'activa',
     prueba_hasta: pruebaHasta,
     reserva_online_activa: false,

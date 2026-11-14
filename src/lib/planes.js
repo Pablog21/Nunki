@@ -87,5 +87,5 @@ export const notaPrecios = (moneda = 'ARS') =>
     ? 'Precios en dólares estadounidenses. Pueden aplicar impuestos de tu país.'
     : 'Precios finales en pesos, IVA incluido.'
 
-export const PRUEBA_DIAS = 14
+export const PRUEBA_DIAS = 15
 export const DESCUENTO_ANUAL = '2 meses sin cargo pagando el año'

@@ -15,8 +15,8 @@ export async function fetchMisPagos() {
 }
 
 // Crea la suscripción mensual en Mercado Pago y devuelve el link para autorizar el débito
-export async function iniciarSuscripcion({ email, empresaId } = {}) {
-  const { data, error } = await supabase.functions.invoke('nunki-mp-suscripcion', { body: { email, empresaId } })
+export async function iniciarSuscripcion({ email, empresaId, plan } = {}) {
+  const { data, error } = await supabase.functions.invoke('nunki-mp-suscripcion', { body: { email, empresaId, plan } })
   if (error) {
     let msg = 'No se pudo iniciar el pago. Probá de nuevo en unos minutos.'
     try { const j = await error.context?.json?.(); if (j?.error) msg = j.error } catch { /* sin detalle */ }
@@ -38,6 +38,8 @@ const dias = (n) => `${n} ${n === 1 ? 'día' : 'días'}`
 export function textoAviso(ep) {
   if (!ep) return null
   switch (ep.estado) {
+    case 'prueba':
+      return { nivel: 'info', texto: `Te quedan ${dias(ep.dias_para_vencer)} de prueba gratis.` }
     case 'prueba_por_vencer':
       return { nivel: 'info', texto: ep.dias_para_vencer > 0 ? `Tu prueba gratis termina en ${dias(ep.dias_para_vencer)}. Activá el pago para no perder el acceso.` : 'Tu prueba gratis termina hoy. Activá el pago para no perder el acceso.' }
     case 'por_vencer':

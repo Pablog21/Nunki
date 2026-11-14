@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { esSuperAdmin } from '../lib/roles'
 import { linkWhatsApp } from '../lib/whatsapp'
 import { fechaCorta as fechaPago, iniciarSuscripcion } from '../lib/facturacion'
+import { TIPO_NEGOCIO } from '../lib/tipos'
 import { PLANES, planPorId, formatoMonto, formatoPrecio, precioPlan, PRUEBA_DIAS, MONEDAS } from '../lib/planes'
 import Configuracion from './Configuracion'
 import '../components/Pagos.css'
@@ -134,7 +135,7 @@ function Solicitudes({ onCrearSalon }) {
               <div className="sa-lead-top">
                 <div>
                   <h3>{l.salon || 'Sin nombre de salón'}</h3>
-                  <p className="sa-muted">{l.nombre}{l.profesionales ? ` · ${l.profesionales} profesionales` : ''}</p>
+                  <p className="sa-muted">{l.nombre}{l.tipo_negocio ? ` · ${TIPO_NEGOCIO[l.tipo_negocio] ?? l.tipo_negocio}` : ''}{l.profesionales ? ` · ${l.profesionales} profesionales` : ''}</p>
                 </div>
                 <span className="sa-muted sa-cuando" title={new Date(l.created_at).toLocaleString('es-AR')}>{haceCuanto(l.created_at)}</span>
               </div>
@@ -425,6 +426,7 @@ function AltaSalon({ inicial, onClose, onCreado }) {
   const c = inicial.contacto
   const [form, setForm] = useState({
     salon: c?.salon || '',
+    tipo_negocio: c?.tipo_negocio || '',
     slug: '',
     whatsapp: c?.telefono || '',
     plan: c?.plan_interes || 'esencial',
@@ -447,7 +449,7 @@ function AltaSalon({ inicial, onClose, onCreado }) {
     const { data, error: err } = await supabase.functions.invoke('nunki-super-alta-salon', {
       body: {
         contacto_id: c?.id || null,
-        salon: { nombre: form.salon, slug: form.slug, whatsapp: form.whatsapp, plan: form.plan, moneda: form.moneda, dias_prueba: Number(form.dias_prueba) },
+        salon: { nombre: form.salon, tipo_negocio: form.tipo_negocio || null, slug: form.slug, whatsapp: form.whatsapp, plan: form.plan, moneda: form.moneda, dias_prueba: Number(form.dias_prueba) },
         admin: { nombre_completo: form.nombre_completo, email: form.email, telefono: form.telefono },
       },
     })
@@ -486,6 +488,12 @@ function AltaSalon({ inicial, onClose, onCreado }) {
             <fieldset>
               <legend>Salón</legend>
               <label className="sa-span2">Nombre del salón o barbería *<input className="input-field" required value={form.salon} onChange={set('salon')} /></label>
+              <label>Tipo de negocio
+                <select className="input-field" value={form.tipo_negocio} onChange={set('tipo_negocio')}>
+                  <option value="">Sin definir</option>
+                  {Object.entries(TIPO_NEGOCIO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
               <label>Dirección de reservas<input className="input-field" value={form.slug} onChange={set('slug')} placeholder="se arma sola si la dejás vacía" /></label>
               <label>WhatsApp del salón<input className="input-field" type="tel" value={form.whatsapp} onChange={set('whatsapp')} /></label>
               <label>Plan

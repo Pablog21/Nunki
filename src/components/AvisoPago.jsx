@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { AlertTriangle, Info, Lock, LogOut } from 'lucide-react'
 import { textoAviso, fechaLarga } from '../lib/facturacion'
-import PanelPago from './PanelPago'
+import ElegirPlan from './ElegirPlan'
+import { miNegocio } from '../lib/tipos'
 import { NunkiSymbol } from './NunkiLogo'
 import './Pagos.css'
 
@@ -14,7 +15,11 @@ export function BannerPago({ ep, esAdmin }) {
     <div className={`pg-banner pg-${aviso.nivel}`} role="status">
       <Icono size={18} />
       <span>{aviso.texto}{!esAdmin && ' Avisale al administrador del salón.'}</span>
-      {esAdmin && <Link to="/mi-plan" className="pg-banner-btn">Pagar ahora</Link>}
+      {esAdmin && !ep.debito_automatico && (
+        <Link to="/mi-plan" className="pg-banner-btn">
+          {ep.en_prueba ? `Quiero Nunki para ${miNegocio(ep.tipo_negocio)}` : 'Pagar ahora'}
+        </Link>
+      )}
     </div>
   )
 }
@@ -38,7 +43,7 @@ export function BloqueoPago({ ep, esAdmin, email, onSalir }) {
             Tus datos están guardados: apenas se acredite el pago, todo vuelve a funcionar como antes.
           </p>
         )}
-        {esAdmin && !suspendida && <PanelPago ep={ep} emailInicial={email} />}
+        {esAdmin && !suspendida && <ElegirPlan ep={ep} emailInicial={email} compacto />}
         {!esAdmin && <p className="pg-muted">Pedile al administrador del salón que regularice el pago.</p>}
         <button className="btn btn-secondary pg-salir" onClick={onSalir}><LogOut size={16} /> Cerrar sesión</button>
       </div>

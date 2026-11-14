@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient'
 import './Landing.css'
 import { NunkiSymbol } from '../components/NunkiLogo'
 import SashaFace from '../components/SashaFace'
+import { TIPO_NEGOCIO } from '../lib/tipos'
 import { PLANES, formatoPrecio, formatoMonto, PRUEBA_DIAS, DESCUENTO_ANUAL, PAQUETE_SASHA, detectarMoneda, extraPlan, notaPrecios } from '../lib/planes'
 
 /* ====================================================================
@@ -132,7 +133,7 @@ export default function Landing() {
   const [contactOpen, setContactOpen] = useState(false)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
-  const [form, setForm] = useState({ nombre: '', salon: '', telefono: '', email: '', profesionales: '', mensaje: '', plan: '' })
+  const [form, setForm] = useState({ nombre: '', salon: '', tipo: '', telefono: '', email: '', profesionales: '', mensaje: '', plan: '' })
 
   // Calculadora: tiempo administrativo recuperado
   const [profesionales, setProfesionales] = useState(4)
@@ -205,6 +206,7 @@ export default function Landing() {
       await supabase.from('contactos_landing').insert([{
         nombre: form.nombre,
         salon: form.salon,
+        tipo_negocio: form.tipo || null,
         telefono: form.telefono,
         email: form.email,
         profesionales: form.profesionales || null,
@@ -215,7 +217,7 @@ export default function Landing() {
       console.warn('No se pudo guardar el contacto en la base:', err)
     }
     const texto =
-      `Hola! Soy ${form.nombre}, de ${form.salon}.\n` +
+      `Hola! Soy ${form.nombre}, de ${form.salon}${form.tipo ? ` (${TIPO_NEGOCIO[form.tipo]})` : ''}.\n` +
       (form.profesionales ? `Somos ${form.profesionales} profesionales.\n` : '') +
       (form.plan ? `Me interesa el plan ${form.plan === 'premium' ? 'Premium' : 'Esencial'}.\n` : '') +
       `Tel: ${form.telefono}${form.email ? ` · ${form.email}` : ''}\n` +
@@ -581,10 +583,16 @@ export default function Landing() {
                 <p className="lp-modal-sub">Te contactamos para mostrarte el sistema con ejemplos de tu salón.</p>
                 <div className="lp-form-grid">
                   <label>Tu nombre *<input required value={form.nombre} onChange={set('nombre')} /></label>
-                  <label>Salón o barbería *<input required value={form.salon} onChange={set('salon')} /></label>
+                  <label>Nombre del salón o barbería *<input required value={form.salon} onChange={set('salon')} /></label>
+                  <label>Tipo de negocio *
+                    <select required value={form.tipo} onChange={set('tipo')}>
+                      <option value="">Elegí una opción</option>
+                      {Object.entries(TIPO_NEGOCIO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </label>
                   <label>WhatsApp *<input required type="tel" value={form.telefono} onChange={set('telefono')} placeholder="11 2345 6789" /></label>
-                  <label>Email<input type="email" value={form.email} onChange={set('email')} /></label>
-                  <label className="lp-span2">¿Cuántos profesionales son?
+                  <label>Email *<input required type="email" value={form.email} onChange={set('email')} placeholder="Va a ser tu usuario en Nunki" /></label>
+                  <label>¿Cuántos profesionales son?
                     <select value={form.profesionales} onChange={set('profesionales')}>
                       <option value="">Elegí una opción</option>
                       <option>1 a 3</option>
