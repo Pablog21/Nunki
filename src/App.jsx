@@ -1,24 +1,25 @@
-import { lazy, Suspense } from 'react'
+import lazyConRecarga from './lib/lazyConRecarga'
+import { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Login from './pages/Login'
-const Landing = lazy(() => import('./pages/Landing'))
-const Layout = lazy(() => import('./components/Layout'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const Clientes = lazy(() => import('./pages/Clientes'))
-const OrdenesTrabajo = lazy(() => import('./pages/OrdenesTrabajo'))
-const Configuracion = lazy(() => import('./pages/Configuracion'))
-const Articulos = lazy(() => import('./pages/Articulos'))
-const Servicios = lazy(() => import('./pages/Servicios'))
-const Compras = lazy(() => import('./pages/Compras'))
-const Colaboradores = lazy(() => import('./pages/Colaboradores'))
-const Asistencias = lazy(() => import('./pages/Asistencias'))
-const Caja = lazy(() => import('./pages/Caja'))
-const Agenda = lazy(() => import('./pages/Agenda'))
-const Reservas = lazy(() => import('./pages/Reservas'))
-const Reserva = lazy(() => import('./pages/Reserva'))
-const SuperAdmin = lazy(() => import('./pages/SuperAdmin'))
-const MiPlan = lazy(() => import('./pages/MiPlan'))
+const Landing = lazyConRecarga(() => import('./pages/Landing'))
+const Layout = lazyConRecarga(() => import('./components/Layout'))
+const Dashboard = lazyConRecarga(() => import('./pages/Dashboard'))
+const Clientes = lazyConRecarga(() => import('./pages/Clientes'))
+const OrdenesTrabajo = lazyConRecarga(() => import('./pages/OrdenesTrabajo'))
+const Configuracion = lazyConRecarga(() => import('./pages/Configuracion'))
+const Articulos = lazyConRecarga(() => import('./pages/Articulos'))
+const Servicios = lazyConRecarga(() => import('./pages/Servicios'))
+const Compras = lazyConRecarga(() => import('./pages/Compras'))
+const Colaboradores = lazyConRecarga(() => import('./pages/Colaboradores'))
+const Asistencias = lazyConRecarga(() => import('./pages/Asistencias'))
+const Caja = lazyConRecarga(() => import('./pages/Caja'))
+const Agenda = lazyConRecarga(() => import('./pages/Agenda'))
+const Reservas = lazyConRecarga(() => import('./pages/Reservas'))
+const Reserva = lazyConRecarga(() => import('./pages/Reserva'))
+const SuperAdmin = lazyConRecarga(() => import('./pages/SuperAdmin'))
+const MiPlan = lazyConRecarga(() => import('./pages/MiPlan'))
 import './index.css'
 
 // Componente para proteger las rutas (solo usuarios logueados)
