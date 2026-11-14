@@ -52,7 +52,7 @@
 .tg { position: fixed; inset: 0; z-index: 10040; pointer-events: none; }
 .tg-velo { position: fixed; inset: 0; background: rgba(6, 18, 15, .55); }
 .tg-agujero { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(6, 18, 15, .6), 0 0 0 3px #D9824A, 0 0 24px 4px rgba(217, 130, 74, .55); transition: all .35s ease; animation: tg-late 1.8s ease-in-out infinite; }
-.tg-burbuja { position: fixed; pointer-events: auto; box-sizing: border-box; padding: 16px 16px 14px; border-radius: 18px; background: var(--surface-color, #12302A); border: 1px solid rgba(217, 130, 74, .45); box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .7); color: var(--text-primary, #F3EFE7); display: grid; gap: 10px; animation: ob-entra .25s ease-out; }
+.tg-burbuja { position: fixed; pointer-events: auto; transition: left .35s ease, top .35s ease, bottom .35s ease; box-sizing: border-box; padding: 16px 16px 14px; border-radius: 18px; background: var(--surface-color, #12302A); border: 1px solid rgba(217, 130, 74, .45); box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .7); color: var(--text-primary, #F3EFE7); display: grid; gap: 10px; animation: ob-entra .25s ease-out; }
 .tg-cabeza { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; padding-right: 28px; }
 .tg-cabeza small { color: #E39461; font-weight: 600; font-size: .75rem; }
 .tg-cabeza h3 { margin: 2px 0 0; font-size: 1.05rem; }
@@ -108,3 +108,14 @@ body.light-theme .ob-fondo { background: rgba(15, 42, 36, .45); }
   .ob-campos { width: 100%; }
   .pp { right: 16px; bottom: 80px; }
 }
+
+/* Insignia de primeros pasos junto a Sasha */
+.pp-insignia { position: fixed; z-index: 990; right: 24px; bottom: 86px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px 10px; border-radius: 999px; border: 1px solid rgba(217, 130, 74, .55); background: var(--surface-color, #12302A); color: var(--text-primary, #F3EFE7); font: 600 .82rem Inter, sans-serif; cursor: pointer; box-shadow: 0 12px 30px -16px rgba(0,0,0,.6); overflow: hidden; animation: ob-entra .3s ease-out; }
+.pp-insignia svg { color: #E39461; }
+.pp-insignia strong { color: #E39461; }
+.pp-insignia i { position: absolute; left: 12px; right: 12px; bottom: 4px; height: 3px; border-radius: 3px; background: rgba(157, 184, 168, .25); }
+.pp-insignia i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--avance); border-radius: 3px; background: #D9824A; }
+.pp-insignia:hover { border-color: #D9824A; }
+body.light-theme .pp-insignia { background: #FFFFFF; color: #0F2A24; }
+@media (max-width: 900px) { .pp-insignia { right: 14px; bottom: 128px; } }
+@media (max-width: 480px) { .pp-insignia span { display: none; } .pp-insignia { bottom: 126px; } }

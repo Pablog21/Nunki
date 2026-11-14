@@ -27,14 +27,26 @@ async function firmaValida(req: Request, dataId: string, secret: string) {
 Deno.serve(async (req: Request) => {
   // GET: chequeo de configuración (no expone las claves)
   if (req.method === 'GET') {
+    const token = (Deno.env.get('MP_ACCESS_TOKEN') ?? '').trim()
+    let tokenValido: boolean | null = null
+    let detalle = ''
+    if (token) {
+      const r = await fetch('https://api.mercadopago.com/users/me', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
+      tokenValido = Boolean(r?.ok)
+      if (r && !r.ok) detalle = `HTTP ${r.status}`
+    }
     return new Response(JSON.stringify({
-      access_token: Boolean(Deno.env.get('MP_ACCESS_TOKEN')),
+      access_token: Boolean(token),
+      access_token_formato: token ? (token.startsWith('APP_USR-') ? 'produccion' : token.startsWith('TEST-') ? 'prueba' : 'desconocido') : null,
+      access_token_largo: token.length,
+      access_token_valido: tokenValido,
+      detalle,
       webhook_secret: Boolean(Deno.env.get('MP_WEBHOOK_SECRET')),
     }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
   }
   if (req.method !== 'POST') return ok()
-  const mpToken = Deno.env.get('MP_ACCESS_TOKEN')
-  const secret = Deno.env.get('MP_WEBHOOK_SECRET')
+  const mpToken = (Deno.env.get('MP_ACCESS_TOKEN') ?? '').trim()
+  const secret = (Deno.env.get('MP_WEBHOOK_SECRET') ?? '').trim()
   if (!mpToken || !secret) return new Response('Mercado Pago no configurado', { status: 503 })
 
   const url = new URL(req.url)
@@ -52,14 +64,30 @@ Deno.serve(async (req: Request) => {
     fetch(`https://api.mercadopago.com${path}`, { headers: { Authorization: `Bearer ${mpToken}` } }).then((r) => (r.ok ? r.json() : null))
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'nunki' } })
 
-  const empresaDe = async (preapprovalId?: string, externalRef?: string) => {
-    if (externalRef) {
+  const esUuid = (v?: string) => /^[0-9a-f-]{36}$/i.test(String(v ?? ''))
+  // El salón se identifica por: referencia externa (su ID), la suscripción o el plan de Mercado Pago creado para él
+  type Emp = { id: string; moneda: string } | null
+  const empresaDe = async (preapprovalId?: string, externalRef?: string, planId?: string): Promise<Emp> => {
+    if (esUuid(externalRef)) {
       const { data } = await admin.from('empresas').select('id, moneda').eq('id', externalRef).maybeSingle()
       if (data) return data
     }
     if (preapprovalId) {
       const { data } = await admin.from('empresas').select('id, moneda').eq('mp_preapproval_id', preapprovalId).maybeSingle()
       if (data) return data
+    }
+    if (planId) {
+      const { data } = await admin.from('empresas').select('id, moneda').eq('mp_plan_id', planId).maybeSingle()
+      if (data) return data
+    }
+    // Último recurso: consultar la suscripción para saber de qué plan es
+    if (preapprovalId) {
+      const s = await mp(`/preapproval/${preapprovalId}`)
+      if (s?.preapproval_plan_id && s.preapproval_plan_id !== planId) {
+        const emp = await empresaDe(undefined, s.external_reference, s.preapproval_plan_id)
+        if (emp) await admin.from('empresas').update({ mp_preapproval_id: s.id, mp_preapproval_estado: s.status }).eq('id', emp.id)
+        return emp
+      }
     }
     return null
   }
@@ -69,8 +97,8 @@ Deno.serve(async (req: Request) => {
       // Cambió el estado de la suscripción (autorizada, pausada, cancelada)
       const s = await mp(`/preapproval/${dataId}`)
       if (!s) return ok('no encontrada')
-      const emp = await empresaDe(s.id, s.external_reference)
-      if (emp) await admin.from('empresas').update({ mp_preapproval_id: s.id, mp_preapproval_estado: s.status }).eq('id', emp.id)
+      const emp = await empresaDe(undefined, s.external_reference, s.preapproval_plan_id) ?? await empresaDe(s.id)
+      if (emp) await admin.from('empresas').update({ mp_preapproval_id: s.id, mp_preapproval_estado: s.status, mp_payer_email: s.payer_email ?? null }).eq('id', emp.id)
       return ok()
     }
 

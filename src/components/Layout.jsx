@@ -168,7 +168,7 @@ export default function Layout() {
   }, [userProfile, esSuper, location.pathname === '/mi-plan'])
 
   if (estadoPago?.bloqueado && !esSuper) {
-    return <BloqueoPago ep={estadoPago} esAdmin={!isOperator} email={user?.email || ''} onSalir={() => signOut()} />
+    return <BloqueoPago ep={estadoPago} esAdmin={!isOperator} onSalir={() => signOut()} />
   }
 
   return (

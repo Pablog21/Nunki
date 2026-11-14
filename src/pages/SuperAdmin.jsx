@@ -247,7 +247,7 @@ function Salones() {
           <tbody>
             {salones.map((s) => (
               <tr key={s.id}>
-                <td><strong>{s.nombre}</strong>{s.slug && <div className="sa-muted">/r/{s.slug}</div>}</td>
+                <td><strong>{s.nombre}</strong><div className="sa-muted">NK-{s.id.replace(/-/g, '').slice(0, 8).toUpperCase()}{s.slug ? ` · /r/${s.slug}` : ''}</div></td>
                 <td>
                   <div className="sa-cuenta">
                     <select className="input-field sa-select" value={s.plan || 'esencial'} onChange={(e) => actualizar(s.id, { plan: e.target.value })} aria-label="Plan">

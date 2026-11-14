@@ -14,7 +14,7 @@ const ETIQUETA = {
 }
 
 export default function MiPlan() {
-  const { userProfile, user } = useAuth()
+  const { userProfile } = useAuth()
   const [ep, setEp] = useState(null)
   const [pagos, setPagos] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -49,6 +49,7 @@ export default function MiPlan() {
             <div className="pg-datos">
               <div><CalendarClock size={16} /> {ep.en_prueba ? 'Prueba hasta' : 'Pagado hasta'}: <strong>{fechaLarga(ep.vencimiento)}</strong></div>
               {ep.estado === 'vencido' && <div>Se suspende el <strong>{fechaLarga(ep.bloqueo_el)}</strong> si no se regulariza.</div>}
+              {ep.codigo && <div className="pg-muted">Código de tu salón: <strong>{ep.codigo}</strong> (figura en tus pagos de Mercado Pago)</div>}
             </div>
             {aviso && <p className={`pg-inline pg-${aviso.nivel}`}>{aviso.texto}</p>}
             {volvioDeMp && !ep.debito_automatico && (
@@ -58,7 +59,7 @@ export default function MiPlan() {
 
           {ep.estado !== 'interna' && (
             <section className="glass-panel pg-elegir">
-              <ElegirPlan ep={ep} emailInicial={user?.email || ''} />
+              <ElegirPlan ep={ep} />
             </section>
           )}
 

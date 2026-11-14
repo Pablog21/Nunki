@@ -88,3 +88,8 @@ body.light-theme .ep-plan.on { background: #FBF3EC; }
 .pg-historial { order: 2; }
 .pg-elegir { order: 3; grid-column: 1 / -1; padding: 1.25rem; }
 .ep-link-acciones a.btn-primary, .ep-link-acciones a.btn-primary:visited { color: var(--on-primary, #0B1F1A); }
+
+.ep-ayuda { text-align: center; }
+.ep-codigo { font-size: .78rem; color: var(--text-secondary, #9DB8A8); }
+.ep-codigo strong { color: var(--text-primary, #F3EFE7); letter-spacing: .04em; }
+body.light-theme .ep-codigo strong { color: #0F2A24; }

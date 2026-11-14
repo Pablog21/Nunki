@@ -1,5 +1,6 @@
-// Nunki · Crea (o reabre) la suscripción mensual de Mercado Pago de un salón.
-// La llama el administrador del salón (o el superadmin). Devuelve el link de Mercado Pago para autorizar el débito.
+// Nunki · Genera el link (y QR) de suscripción mensual de Mercado Pago para un salón.
+// No pide email: se crea un "plan de suscripción" propio del salón; quien paga entra con la sesión
+// que ya tiene en la app de Mercado Pago. El código del salón va en la descripción para rastrear el pago.
 // Secretos: MP_ACCESS_TOKEN (obligatorio), NUNKI_APP_URL (opcional, para volver a la app).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -11,6 +12,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
 const PLAN_NOMBRE: Record<string, string> = { esencial: 'Esencial', premium: 'Premium' }
+const codigoSalon = (id: string) => `NK-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -20,7 +22,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const mpToken = Deno.env.get('MP_ACCESS_TOKEN')
+    const mpToken = (Deno.env.get('MP_ACCESS_TOKEN') ?? '').trim()
     if (!mpToken) return json({ error: 'El cobro con Mercado Pago todavía no está habilitado. Escribinos y lo resolvemos.' }, 503)
 
     const caller = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } })
@@ -34,10 +36,10 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}))
     const empresaId = rol === 'super_admin' && body?.empresaId ? String(body.empresaId) : perfil.empresa_id
-    const payerEmail = String(body?.email || user.email || '').trim().toLowerCase()
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail)) return json({ error: 'Ingresá el email de tu cuenta de Mercado Pago' }, 400)
 
-    const { data: empresa } = await admin.from('empresas').select('id, nombre, plan, moneda, precio_mensual, mp_preapproval_id, mp_preapproval_estado').eq('id', empresaId).maybeSingle()
+    const { data: empresa } = await admin.from('empresas')
+      .select('id, nombre, plan, moneda, precio_mensual, mp_preapproval_estado, mp_plan_id, mp_plan_monto, mp_plan_tipo, mp_plan_url')
+      .eq('id', empresaId).maybeSingle()
     if (!empresa) return json({ error: 'Salón inexistente' }, 404)
     if (empresa.mp_preapproval_estado === 'authorized') return json({ error: 'Este salón ya tiene el débito automático activo.' }, 409)
     if (empresa.moneda === 'USD') return json({ error: 'Las suscripciones en dólares se gestionan aparte. Te contactamos para coordinar el pago.' }, 400)
@@ -53,39 +55,35 @@ Deno.serve(async (req: Request) => {
     const monto = Number(empresa.precio_mensual ?? precioPlan)
     if (!(monto > 0)) return json({ error: 'No hay un precio definido para este plan' }, 400)
 
-    // Si ya tenía una suscripción pendiente o pausada, se cancela para no duplicar cobros
-    if (empresa.mp_preapproval_id) {
-      await fetch(`https://api.mercadopago.com/preapproval/${empresa.mp_preapproval_id}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${mpToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'cancelled' }),
-      }).catch(() => null)
+    const codigo = codigoSalon(empresa.id)
+
+    // Reutilizar el plan de Mercado Pago del salón si ya existe con el mismo plan e importe
+    if (empresa.mp_plan_id && empresa.mp_plan_url && Number(empresa.mp_plan_monto) === monto && empresa.mp_plan_tipo === empresa.plan) {
+      return json({ ok: true, url: empresa.mp_plan_url, plan: empresa.plan, monto, codigo })
     }
 
     const appUrl = Deno.env.get('NUNKI_APP_URL') ?? req.headers.get('origin') ?? 'https://nunki-app-321805493034.us-central1.run.app'
-    const resp = await fetch('https://api.mercadopago.com/preapproval', {
+    const resp = await fetch('https://api.mercadopago.com/preapproval_plan', {
       method: 'POST',
       headers: { Authorization: `Bearer ${mpToken}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': crypto.randomUUID() },
       body: JSON.stringify({
-        reason: `Nunki ${PLAN_NOMBRE[empresa.plan] ?? ''} · ${empresa.nombre}`.slice(0, 120),
-        external_reference: empresa.id,
-        payer_email: payerEmail,
+        reason: `Nunki ${PLAN_NOMBRE[empresa.plan] ?? ''} · ${empresa.nombre} · ${codigo}`.slice(0, 120),
         back_url: `${appUrl.replace(/\/$/, '')}/mi-plan`,
-        status: 'pending',
         auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: monto, currency_id: 'ARS' },
       }),
     })
-    const mp = await resp.json()
+    const mp = await resp.json().catch(() => ({}))
     if (!resp.ok || !mp?.init_point) {
-      console.error('MP preapproval', resp.status, mp)
-      return json({ error: mp?.message ? `Mercado Pago: ${mp.message}` : 'Mercado Pago no pudo crear la suscripción' }, 502)
+      console.error('MP preapproval_plan', resp.status, mp)
+      const msg = /token/i.test(mp?.message ?? '') ? 'La conexión con Mercado Pago no está bien configurada. Ya nos avisaron; probá de nuevo más tarde.' : (mp?.message ? `Mercado Pago: ${mp.message}` : 'Mercado Pago no pudo generar el pago')
+      return json({ error: msg }, 502)
     }
 
     await admin.from('empresas').update({
-      mp_preapproval_id: mp.id, mp_preapproval_estado: mp.status ?? 'pending', mp_payer_email: payerEmail,
+      mp_plan_id: mp.id, mp_plan_url: mp.init_point, mp_plan_monto: monto, mp_plan_tipo: empresa.plan,
     }).eq('id', empresa.id)
 
-    return json({ ok: true, url: mp.init_point, plan: empresa.plan, monto })
+    return json({ ok: true, url: mp.init_point, plan: empresa.plan, monto, codigo })
   } catch (err) {
     console.error(err)
     return json({ error: 'Error inesperado' }, 500)

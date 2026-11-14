@@ -25,7 +25,7 @@ export function BannerPago({ ep, esAdmin }) {
 }
 
 // Pantalla que reemplaza al sistema cuando el acceso está suspendido
-export function BloqueoPago({ ep, esAdmin, email, onSalir }) {
+export function BloqueoPago({ ep, esAdmin, onSalir }) {
   const suspendida = ep?.estado === 'suspendida'
   return (
     <div className="pg-bloqueo">
@@ -43,7 +43,7 @@ export function BloqueoPago({ ep, esAdmin, email, onSalir }) {
             Tus datos están guardados: apenas se acredite el pago, todo vuelve a funcionar como antes.
           </p>
         )}
-        {esAdmin && !suspendida && <ElegirPlan ep={ep} emailInicial={email} compacto />}
+        {esAdmin && !suspendida && <ElegirPlan ep={ep} compacto />}
         {!esAdmin && <p className="pg-muted">Pedile al administrador del salón que regularice el pago.</p>}
         <button className="btn btn-secondary pg-salir" onClick={onSalir}><LogOut size={16} /> Cerrar sesión</button>
       </div>

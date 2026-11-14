@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import { esOperador } from '../../lib/roles'
 import { TOUR_GENERAL, GUIAS } from '../../lib/tour'
+import { GraduationCap } from 'lucide-react'
 import Bienvenida from './Bienvenida'
 import TourGuiado from './TourGuiado'
 import PrimerosPasos from './PrimerosPasos'
@@ -70,6 +71,24 @@ export function OnboardingProvider({ children }) {
 
   const abrirPrimerosPasos = useCallback(() => { cargarProgreso(); setModo('pasos') }, [cargarProgreso])
 
+  // Progreso para la insignia junto a Sasha: se recalcula al cambiar de pantalla o al cerrar el tutorial
+  useEffect(() => {
+    if (!userProfile || esSuper || !activeEmpresaId || modo) return
+    cargarProgreso()
+  }, [userProfile, esSuper, activeEmpresaId, modo, location.pathname, cargarProgreso])
+
+  const pendientes = useMemo(() => {
+    if (!progreso) return null
+    const items = [
+      ...(operador ? [] : [Boolean(progreso.logo || progreso.descripcion)]),
+      ...GUIAS.filter((g) => !(g.soloAdmin && operador)).map((g) => {
+        const v = progreso[g.progreso]
+        return typeof v === 'boolean' ? v : Number(v) > 0
+      }),
+    ]
+    return { total: items.length, hechos: items.filter(Boolean).length }
+  }, [progreso, operador])
+
   const terminarTour = useCallback(() => {
     if (guiaActual) {
       guardar({ [`guia_${guiaActual.id}`]: new Date().toISOString() })
@@ -106,6 +125,14 @@ export function OnboardingProvider({ children }) {
   return (
     <OnboardingCtx.Provider value={valor}>
       {children}
+      {!modo && pendientes && pendientes.hechos < pendientes.total && location.pathname !== '/mi-plan' && (
+        <button type="button" className="pp-insignia" onClick={abrirPrimerosPasos} title="Primeros pasos">
+          <GraduationCap size={16} />
+          <span>Primeros pasos</span>
+          <strong>{pendientes.hechos}/{pendientes.total}</strong>
+          <i style={{ '--avance': `${(pendientes.hechos / pendientes.total) * 100}%` }} />
+        </button>
+      )}
       {modo === 'bienvenida' && <Bienvenida esAdmin={!operador} onFin={finBienvenida} onSalir={() => finBienvenida(null)} />}
       {modo === 'tour' && (
         <TourGuiado

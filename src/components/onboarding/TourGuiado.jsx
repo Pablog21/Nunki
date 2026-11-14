@@ -50,8 +50,8 @@ export default function TourGuiado({ pasos, indice, setIndice, guia, navigate, o
   useEffect(() => {
     let vivo = true
     let intentos = 0
+    // La tarjeta se queda donde estaba hasta encontrar el próximo elemento (sin saltar al centro)
     setBuscando(true)
-    setRect(null)
     elRef.current = null
     setHablando(true)
     const tHablar = setTimeout(() => vivo && setHablando(false), 1800)
@@ -65,7 +65,7 @@ export default function TourGuiado({ pasos, indice, setIndice, guia, navigate, o
         return
       }
       if (++intentos < 20 && paso?.objetivo) setTimeout(probar, 150)
-      else setBuscando(false)
+      else { setRect(null); setBuscando(false) }
     }
     setTimeout(probar, 120)
     return () => { vivo = false; clearTimeout(tHablar) }

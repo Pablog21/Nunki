@@ -7,9 +7,8 @@ import { miNegocio } from '../lib/tipos'
 import './Pagos.css'
 
 // Elegir plan y pagar con Mercado Pago (débito automático mensual), con link y QR.
-export default function ElegirPlan({ ep, emailInicial = '', compacto = false }) {
+export default function ElegirPlan({ ep, compacto = false }) {
   const [plan, setPlan] = useState(ep?.plan === 'premium' ? 'premium' : 'esencial')
-  const [email, setEmail] = useState(emailInicial)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const [link, setLink] = useState(null)
@@ -56,7 +55,7 @@ export default function ElegirPlan({ ep, emailInicial = '', compacto = false }) 
     setError('')
     setLink(null)
     try {
-      const url = await iniciarSuscripcion({ email, plan })
+      const url = await iniciarSuscripcion({ plan })
       setLink({ url, plan })
     } catch (err) {
       setError(err.message)
@@ -108,27 +107,25 @@ export default function ElegirPlan({ ep, emailInicial = '', compacto = false }) 
 
       {!link ? (
         <form className="ep-form" onSubmit={generar}>
-          <label>Email de tu cuenta de Mercado Pago
-            <input type="email" required className="input-field" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" />
-            <small className="pg-muted">Tiene que ser el email con el que entrás a Mercado Pago.</small>
-          </label>
           {error && <p className="pg-error">{error}</p>}
           <button type="submit" className="btn btn-primary" disabled={enviando}>
-            {enviando ? 'Preparando el pago…' : `Pagar ${formatoMonto(precio(plan), ep.moneda)}/mes con Mercado Pago`}
+            {enviando ? 'Generando el pago…' : `Pagar ${formatoMonto(precio(plan), ep.moneda)}/mes con Mercado Pago`}
           </button>
+          <small className="pg-muted ep-ayuda">Te mostramos un QR para pagar desde la app de Mercado Pago de tu celular. No hace falta ingresar ningún dato.</small>
         </form>
       ) : (
         <div className="ep-link">
           <div className="ep-qr">
             {qr ? <img src={qr} alt="Código QR para pagar con Mercado Pago" width="200" height="200" /> : <div className="ep-qr-vacio" />}
             <small className="pg-muted"><Smartphone size={13} /> Escaneá con la cámara del celular</small>
+            {ep.codigo && <small className="ep-codigo">Código de tu salón: <strong>{ep.codigo}</strong></small>}
           </div>
           <div className="ep-link-acciones">
             <p><strong>Plan {PLANES.find((p) => p.id === link.plan)?.nombre}</strong> · {formatoMonto(precio(link.plan), ep.moneda)}/mes</p>
-            <p className="pg-muted">Abrí el link, iniciá sesión con tu cuenta de Mercado Pago y confirmá la suscripción. Cuando vuelvas, tu cuenta se actualiza sola en unos minutos.</p>
+            <p className="pg-muted">Escaneá el QR con el celular: se abre Mercado Pago con el importe listo y solo tenés que confirmar. Si estás en el celular, tocá "Abrir Mercado Pago". Tu cuenta de Nunki se actualiza sola en unos minutos.</p>
             <a className="btn btn-primary" href={link.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Abrir Mercado Pago</a>
             <button type="button" className="btn btn-secondary" onClick={copiar}><Copy size={16} /> {copiado ? 'Link copiado' : 'Copiar link'}</button>
-            <button type="button" className="sa-link ep-otro" onClick={() => setLink(null)}>Cambiar plan o email</button>
+            <button type="button" className="sa-link ep-otro" onClick={() => setLink(null)}>Elegir otro plan</button>
           </div>
         </div>
       )}
