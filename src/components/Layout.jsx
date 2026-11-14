@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { Users, Scissors, Package, LayoutDashboard, LogOut, FileText, ShoppingCart, Settings, Building, UserCheck, Clock, Wallet, Calendar, Sparkles, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Menu, X, Bell, ShieldCheck, CreditCard } from 'lucide-react'
+import { Users, Scissors, Package, LayoutDashboard, LogOut, FileText, ShoppingCart, Settings, Building, UserCheck, Clock, Wallet, Calendar, Sparkles, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Menu, X, Bell, ShieldCheck, CreditCard, GraduationCap } from 'lucide-react'
 import SashaAssistant from './SashaAssistant'
 import { updateAppBranding } from '../lib/pwaBranding'
 import { esOperador } from '../lib/roles'
 import { NunkiSymbol } from './NunkiLogo'
 import { BannerPago, BloqueoPago } from './AvisoPago'
 import { fetchMiEstadoPago } from '../lib/facturacion'
+import { OnboardingProvider } from './onboarding/Onboarding'
 
 export default function Layout() {
   const { signOut, user, userProfile, activeEmpresaId, changeActiveEmpresaId } = useAuth()
@@ -18,6 +19,14 @@ export default function Layout() {
   const [bgVideo, setBgVideo] = useState('')
   const [allCompanies, setAllCompanies] = useState([])
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [refrescoEmpresa, setRefrescoEmpresa] = useState(0)
+
+  // Cuando la bienvenida guarda los datos del salón, refrescar nombre y logo
+  useEffect(() => {
+    const refrescar = () => setRefrescoEmpresa((n) => n + 1)
+    window.addEventListener('nunki:empresa-actualizada', refrescar)
+    return () => window.removeEventListener('nunki:empresa-actualizada', refrescar)
+  }, [])
   const navigate = useNavigate()
   const location = useLocation()
   const mainContentRef = useRef(null)
@@ -135,7 +144,7 @@ export default function Layout() {
       }
     }
     fetchEmpresaInfo()
-  }, [activeEmpresaId])
+  }, [activeEmpresaId, refrescoEmpresa])
 
   const handleCompanyChangeInSidebar = (e) => {
     changeActiveEmpresaId(e.target.value)
@@ -351,6 +360,12 @@ export default function Layout() {
                 Configuración
               </NavLink>
             )}
+            {!esSuper && (
+              <button type="button" className="nav-link nav-link-boton" onClick={() => { setMobileMenuOpen(false); window.dispatchEvent(new CustomEvent('nunki:tutorial', { detail: 'pasos' })) }}>
+                <GraduationCap size={20} />
+                Tutorial
+              </button>
+            )}
           </nav>
 
           <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
@@ -443,6 +458,9 @@ export default function Layout() {
 
       {/* Asistente Inteligente Sasha (Audio & Texto) */}
       <SashaAssistant />
+
+      {/* Bienvenida, recorrido guiado y primeros pasos */}
+      {!esSuper && <OnboardingProvider />}
 
       {/* MODAL CAMBIO DE CONTRASEÑA */}
       {showPasswordModal && createPortal(

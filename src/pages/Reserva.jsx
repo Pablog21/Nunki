@@ -133,7 +133,7 @@ export default function Reserva() {
           {salon.logo_url ? <img src={salon.logo_url} alt="" className="rv-logo" /> : <NunkiSymbol size={40} />}
           <div>
             <h1>{salon.nombre}</h1>
-            <p className="rv-muted">Reservá tu turno online</p>
+            <p className="rv-muted">{salon.descripcion || 'Reservá tu turno online'}</p>
           </div>
         </header>
 

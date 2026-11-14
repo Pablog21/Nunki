@@ -1265,3 +1265,5 @@ body.light-theme .calc-result-box {
     font-size: 1.25rem;
   }
 }
+
+.nav-link-boton { width: 100%; background: none; border: 0; font: inherit; text-align: left; cursor: pointer; }

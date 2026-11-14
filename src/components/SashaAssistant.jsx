@@ -266,6 +266,19 @@ export default function SashaAssistant() {
     // Agregar mensaje del usuario (no se repite cuando reintentamos tras desbloquear)
     const userMsgId = Date.now().toString()
     if (!reintento) setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: query }])
+
+    // Pedidos del tutorial: los resuelve Sasha sin consultar a la IA (no gastan consultas)
+    if (/\b(tutorial|recorrido|primeros pasos|ens[eé][nñ]ame|c[oó]mo (se )?usa|mostrame la app|gu[ií]a)\b/i.test(query)) {
+      const pasos = /primeros pasos|cargar|gu[ií]a/i.test(query)
+      const texto = pasos ? '¡Dale! Te abro los primeros pasos para que vayamos cargando todo juntos.' : '¡Dale! Te muestro la app pantalla por pantalla.'
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'assistant', text: texto }])
+      speakText(texto)
+      setTimeout(() => {
+        setIsOpen(false)
+        window.dispatchEvent(new CustomEvent('nunki:tutorial', { detail: pasos ? 'pasos' : 'tour' }))
+      }, 900)
+      return
+    }
     setIsProcessing(true)
 
     try {
@@ -1231,6 +1244,13 @@ export default function SashaAssistant() {
                   onClick={() => navigate('/reservas')}
                 >
                   🔔 Recordatorios de mañana
+                </button>
+                <button
+                  type="button"
+                  className="sasha-chip"
+                  onClick={() => handleSendMessage('Mostrame el tutorial')}
+                >
+                  🎓 Tutorial
                 </button>
                 <button
                   type="button"
